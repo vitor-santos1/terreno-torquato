@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Modelo 3D interativo do terreno de esquina no Parque Mosaico, Manaus/AM.">
+<style>[hidden]{display:none!important} body{margin:0;font-size:14px} :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Terreno Parque Mosaico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-bleed 3D scene; property card top-left, view + simulation controls floating at the bottom */
+:root {
+  --panel: rgba(250, 251, 248, 0.92);
+  --ink: #1f1a17;
+  --muted: #62584f;
+  --line: rgba(31, 26, 23, 0.12);
+  --accent: #b4532a;
+  --accent-ink: #ffffff;
+  --chip: rgba(31, 26, 23, 0.06);
+  --display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bg: #cfe3ef;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --panel: rgba(26, 21, 18, 0.9); --ink: #f3ece6; --muted: #b8aaa0;
+    --line: rgba(243, 236, 230, 0.14); --accent: #e07a4b; --accent-ink: #1a0f09; --chip: rgba(243, 236, 230, 0.08);
+    --bg: #1b2a33; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --panel: rgba(26, 21, 18, 0.9); --ink: #f3ece6; --muted: #b8aaa0;
+  --line: rgba(243, 236, 230, 0.14); --accent: #e07a4b; --accent-ink: #1a0f09; --chip: rgba(243, 236, 230, 0.08);
+  --bg: #1b2a33; color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); overflow: hidden; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+.card {
+  position: fixed; z-index: 5;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  left: max(16px, env(safe-area-inset-left, 0px));
+  width: min(340px, calc(100vw - 32px));
+  background: var(--panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(40, 20, 10, 0.18);
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;
+}
+.eyebrow { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.card h1 { margin: 0; font-family: var(--display); font-size: 21px; line-height: 1.2; font-weight: 700; text-wrap: balance; }
+.area { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.area b { font-family: var(--display); font-size: 32px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.area span { color: var(--muted); font-size: 12.5px; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 13px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; min-width: 0; }
+.note { font-size: 11.5px; color: var(--muted); line-height: 1.45; margin: 0; border-top: 1px solid var(--line); padding-top: 10px; }
+.toggle-card { display: none; }
+
+.dock {
+  position: fixed; z-index: 5; left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; justify-content: center; pointer-events: none;
+}
+.dock-inner {
+  pointer-events: auto; max-width: 100%;
+  background: var(--panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px rgba(40, 20, 10, 0.18);
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0;
+}
+.row { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.row::-webkit-scrollbar { display: none; }
+.row-label { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; flex: none; width: 74px; }
+.btn { flex: none; font: 500 13px/1 var(--body); color: var(--ink); background: var(--chip); border: 1px solid transparent; border-radius: 999px; padding: 8px 13px; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--line); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.sep { width: 1px; height: 20px; background: var(--line); flex: none; margin: 0 4px; }
+
+.labels { position: fixed; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.lbl { position: absolute; left: 0; top: 0; font: 600 11.5px/1.2 var(--body); color: #1f1a17; background: rgba(255, 255, 255, 0.92); padding: 4px 8px; border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+.lbl.big { font: 700 21px/1 var(--display); color: #fff; background: rgba(180, 83, 42, 0.92); padding: 8px 12px; border-radius: 8px; }
+.lbl.big small { display: block; font: 600 10.5px/1.3 var(--body); letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.92; margin-top: 3px; }
+.lbl.dim { background: rgba(226, 35, 35, 0.92); color: #fff; font-variant-numeric: tabular-nums; }
+.lbl.road { background: rgba(30, 41, 59, 0.86); color: #fff; }
+
+.compass { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top, 0px) + 16px); right: max(16px, env(safe-area-inset-right, 0px)); width: 48px; height: 48px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(40, 20, 10, 0.16); display: grid; place-items: center; }
+.compass svg { width: 40px; height: 40px; }
+.compass .n { fill: #dc2626; }
+.compass .s { fill: var(--muted); }
+.compass text { fill: var(--ink); font: 700 9px var(--display); }
+.loading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 9; background: var(--bg); color: var(--muted); font: 500 14px var(--body); }
+
+@media (max-width: 640px) {
+  .card { padding: 12px 14px; gap: 6px; width: calc(100vw - 96px); }
+  .card h1 { font-size: 16px; }
+  .area b { font-size: 23px; }
+  .card.collapsed .facts, .card.collapsed .note { display: none; }
+  .toggle-card { display: inline-block; align-self: flex-start; font: 600 12px var(--body); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+  .row-label { width: auto; }
+  .dock-inner { width: 100%; }
+  .lbl { font-size: 10.5px; }
+  .lbl.big { font-size: 16px; }
+}
+</style>
+
+</head>
+<body>
+<div id="stage"></div>
+<div class="labels" id="labels"></div>
+<div class="loading" id="loading">Carregando o modelo 3D…</div>
+
+<section class="card collapsed" id="card" aria-label="Dados do terreno">
+  <div class="eyebrow">Terreno de esquina · Parque Mosaico · Manaus/AM</div>
+  <h1>Av. José Moacir Teberga de Toledo × R. Fúlvio Pennachi</h1>
+  <div class="area"><b>≈ 6.300 m²</b><span>estimativa por satélite</span></div>
+  <dl class="facts">
+    <dt>Frente avenida</dt><dd>≈ 93 m</dd>
+    <dt>Frente R. Fúlvio</dt><dd>≈ 124 m</dd>
+    <dt>Laterais</dt><dd>≈ 60 m e ≈ 62 m</dd>
+    <dt>Situação</dt><dd>Plano, terraplenado, quadra inteira cercada por ruas</dd>
+    <dt>Vizinhança</dt><dd>Smart Fit Parque Mosaico, Prime Vivendas do Parque, condomínios Vista das Paineiras e Vista dos Jacarandás, USF Walid Abdel Aziz</dd>
+  </dl>
+  <p class="note">Modelo ilustrativo montado a partir das fotos do local e da imagem de satélite. Área e medidas são aproximadas. Confirme na matrícula do imóvel. Arraste para girar e use dois dedos ou a roda do mouse para zoom.</p>
+  <button class="toggle-card" id="toggleCard" type="button" aria-expanded="false">Ver detalhes</button>
+</section>
+
+<div class="compass" title="Norte" aria-hidden="true">
+  <svg viewBox="-20 -20 40 40" id="compassRose">
+    <polygon class="n" points="0,-15 4.5,0 -4.5,0"></polygon>
+    <polygon class="s" points="0,15 4.5,0 -4.5,0"></polygon>
+    <text x="0" y="-16.5" text-anchor="middle">N</text>
+  </svg>
+</div>
+
+<nav class="dock" aria-label="Controles do modelo">
+  <div class="dock-inner">
+    <div class="row" role="group" aria-label="Câmera">
+      <span class="row-label">Vista</span>
+      <button class="btn" id="v-drone" data-view="drone" aria-pressed="true" type="button">Drone</button>
+      <button class="btn" id="v-top" data-view="top" aria-pressed="false" type="button">De cima</button>
+      <button class="btn" id="v-corner" data-view="corner" aria-pressed="false" type="button">Da esquina</button>
+      <button class="btn" id="v-walk" data-view="walk" aria-pressed="false" type="button">Da calçada</button>
+      <button class="btn" id="v-back" data-view="back" aria-pressed="false" type="button">Dos condomínios</button>
+      <span class="sep"></span>
+      <button class="btn" id="spin" aria-pressed="false" type="button">Girar</button>
+      <button class="btn" id="hl" aria-pressed="true" type="button">Destacar área</button>
+    </div>
+    <div class="row" role="group" aria-label="Simulação de uso">
+      <span class="row-label">Simular</span>
+      <button class="btn" id="m-original" data-mode="original" aria-pressed="true" type="button">Terreno atual</button>
+      <button class="btn" id="m-mall" data-mode="mall" aria-pressed="false" type="button">Centro comercial</button>
+      <button class="btn" id="m-market" data-mode="market" aria-pressed="false" type="button">Supermercado</button>
+      <button class="btn" id="m-towers" data-mode="towers" aria-pressed="false" type="button">Torres residenciais</button>
+    </div>
+  </div>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ---------- utilidades ---------- */
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+var R = rng(6095);
+function rand(a, b) { return a + (b - a) * R(); }
+function pick(a) { return a[(R() * a.length) | 0]; }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function smooth(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
+function pip(poly, x, z) { var c = false; for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) { var a = poly[i], b = poly[j]; if ((a[1] > z) !== (b[1] > z) && x < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
+function distPoly(pts, x, z) {
+  var best = 1e9;
+  for (var i = 1; i < pts.length; i++) {
+    var a = pts[i - 1], b = pts[i], dx = b[0] - a[0], dz = b[1] - a[1], L2 = dx * dx + dz * dz || 1;
+    var t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / L2, 0, 1), ex = a[0] + dx * t - x, ez = a[1] + dz * t - z;
+    best = Math.min(best, Math.hypot(ex, ez));
+  }
+  return best;
+}
+function resample(pts, step) {
+  var out = [pts[0]];
+  for (var i = 1; i < pts.length; i++) {
+    var a = pts[i - 1], b = pts[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(L / step));
+    for (var k = 1; k <= n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]);
+  }
+  return out;
+}
+
+/* ---------- geografia (metros; x = leste, z = sul) ----------
+   Lote: quadra entre a avenida (SO), R. Fúlvio Pennachi (NE), a rua de ligação (SE) e a rua do Smart Fit (NO). */
+var A = [-44, -87.5], B = [49, -6], C = [2.5, 32.5], D = [-66, -30];
+var LOT = [A, B, C, D];
+var U = [0.752, 0.659], V = [-0.659, 0.752], TH = Math.atan2(U[1], U[0]);
+function L(s, t) { return [A[0] + U[0] * s + V[0] * t, A[1] + U[1] * s + V[1] * t]; } // s ao longo da R. Fúlvio, t em direção à avenida
+function inLot(x, z, m) {
+  if (!pip(LOT, x, z)) return false;
+  return !m || distPoly(LOT.concat([A]), x, z) > m;
+}
+
+var AVENUE = [[-460, -28], [-330, -30], [-230, -33], [-160, -36], [-118, -33], [-94, -27], [-75.1, -20], [-6.6, 42.5], [8, 62], [24, 95], [42, 150], [62, 220], [90, 300], [125, 390], [160, 470]];
+var FULVIO = [[30, -460], [12, -360], [-2, -270], [-22, -170], [-33, -120], [-38.1, -94.3], [54.9, -12.8], [70, -4], [100, 2], [160, 4], [220, 0], [290, -30], [360, -60]];
+var LINK = [[2, 44.5], [8.2, 39.4], [54.7, 0.9], [62, -5]];
+var NWST = [[-36, -110], [-52.4, -90.7], [-74.4, -33.2], [-79, -24]];
+var CAMILA = [[95, -330], [100, -225], [120, -125], [150, -50], [168, -2]];
+var JEANNETTE = [[-1, -228], [100, -232]];
+var CLINIC_RD = [[25, 97], [-95, 93]];
+
+function H(x, z) {
+  var w = smooth((-x - 115) / 170) * 11, s = smooth((z - 190) / 170) * 7, e = smooth((x - 210) / 160) * 5;
+  var m = Math.max(w, s, e);
+  var n = (Math.sin(x * 0.023) + Math.cos(z * 0.019 + x * 0.007) + 0.6 * Math.sin((x - z) * 0.041)) * 0.9;
+  return w + s + e + n * (m / 11);
+}
+
+/* ---------- renderer / cena ---------- */
+var stage = document.getElementById('stage');
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+stage.appendChild(renderer.domElement);
+
+var scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xc9def0, 520, 1700);
+var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 6000);
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.495; controls.minDistance = 8; controls.maxDistance = 1100;
+controls.autoRotateSpeed = 0.6;
+
+(function sky() {
+  var m = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: new THREE.Color(0x1f6fd6) }, bottom: { value: new THREE.Color(0xcfe2f2) } },
+    vertexShader: 'varying float h; void main(){ h = normalize(position).y; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader: 'uniform vec3 top; uniform vec3 bottom; varying float h; void main(){ float t = pow(clamp(h,0.0,1.0),0.5); gl_FragColor = vec4(mix(bottom, top, t),1.0);}'
+  });
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(3500, 32, 16), m));
+})();
+scene.add(new THREE.HemisphereLight(0xe2f0ff, 0x6b5a3c, 0.78));
+var sun = new THREE.DirectionalLight(0xfff3df, 1.05);
+sun.position.set(-140, 420, 160); sun.target.position.set(0, 0, -30);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+var sc = sun.shadow.camera; sc.left = -380; sc.right = 380; sc.top = 380; sc.bottom = -380; sc.near = 50; sc.far = 1100;
+sun.shadow.bias = -0.0006;
+scene.add(sun, sun.target);
+
+/* ---------- textura do chão ---------- */
+var W = 1000, CX = 20, CZ = -40, S = 2048, K = S / W;
+function px(x) { return (x - (CX - W / 2)) * K; }
+function pz(z) { return (z - (CZ - W / 2)) * K; }
+function pm(m) { return m * K; }
+function poly(c, pts) { c.beginPath(); pts.forEach(function (p, i) { (i ? c.lineTo : c.moveTo).call(c, px(p[0]), pz(p[1])); }); c.closePath(); }
+function rectW(c, x0, z0, x1, z1, col) { c.fillStyle = col; c.fillRect(px(x0), pz(z0), px(x1) - px(x0), pz(z1) - pz(z0)); }
+function speckle(c, x0, z0, x1, z1, cols, n, r0, r1, a) {
+  for (var i = 0; i < n; i++) { c.globalAlpha = a * rand(0.4, 1); c.fillStyle = pick(cols); c.beginPath(); c.arc(px(rand(x0, x1)), pz(rand(z0, z1)), pm(rand(r0, r1)), 0, 6.283); c.fill(); }
+  c.globalAlpha = 1;
+}
+function lotFrame(c) { c.setTransform(K * U[0], K * U[1], K * V[0], K * V[1], px(A[0]), pz(A[1])); } // desenha em (s, t)
+
+var base = document.createElement('canvas'); base.width = base.height = S;
+(function paintBase() {
+  var c = base.getContext('2d');
+  c.fillStyle = '#3f5f2c'; c.fillRect(0, 0, S, S);
+  speckle(c, CX - W / 2, CZ - W / 2, CX + W / 2, CZ + W / 2, ['#365426', '#4b6d33', '#2f4b22', '#57773a'], 7000, 3, 12, 0.5);
+  // condomínios ao norte/nordeste (piso claro + gramados)
+  poly(c, [[-12, -215], [104, -222], [122, -125], [152, -50], [168, 0], [66, 0], [-30, -92], [-28, -170]]); c.fillStyle = '#c9c6bd'; c.fill();
+  speckle(c, -30, -222, 168, 0, ['#9fb66e', '#b9b6ac', '#8aa65d'], 900, 2, 6, 0.55);
+  rectW(c, -12, -370, 110, -230, '#c9c6bd'); speckle(c, -12, -370, 110, -230, ['#9fb66e', '#b9b6ac'], 400, 2, 6, 0.5);
+  // loteamento de casas (telhados vermelhos) a leste
+  poly(c, [[108, -380], [300, -380], [320, -40], [175, -8], [128, -120]]); c.fillStyle = '#b6aca0'; c.fill();
+  // Prime Vivendas
+  poly(c, [[20, 52], [62, 6], [190, 6], [195, 100], [55, 105]]); c.fillStyle = '#cbc7be'; c.fill();
+  speckle(c, 20, 6, 195, 105, ['#9fb66e', '#bdb9b0'], 300, 2, 5, 0.5);
+  // do outro lado da avenida: obra cercada, posto de saúde, terreno de terra
+  poly(c, [[-96, -14], [-40, 24], [-6, 62], [-96, 62]]); c.fillStyle = '#b98f6a'; c.fill();
+  speckle(c, -96, 30, -60, 62, ['#a97f5c', '#c9a07a', '#8f9b5a'], 500, 1.5, 6, 0.55);
+  rectW(c, -92, 66, 20, 106, '#bdb8ad');
+  poly(c, [[-82, 106], [34, 106], [44, 175], [-70, 178]]); c.fillStyle = '#c96f42'; c.fill();
+  speckle(c, -82, 106, 44, 178, ['#b9613a', '#d6824f', '#a85a34'], 600, 1, 5, 0.5);
+  rectW(c, -215, 32, -150, 122, '#7d7f82');
+  // Smart Fit: estacionamento
+  c.save(); c.translate(px(-73), pz(-62)); c.rotate(Math.atan2(0.934, -0.357)); c.fillStyle = '#5c5f63'; c.fillRect(-pm(48), -pm(12), pm(96), pm(24)); c.restore();
+  // calçadas de paver com faixa de grama em volta do lote
+  c.lineJoin = 'round';
+  poly(c, LOT); c.strokeStyle = '#7fa24a'; c.lineWidth = pm(9.4); c.stroke();
+  poly(c, LOT); c.strokeStyle = '#a99d90'; c.lineWidth = pm(6.8); c.stroke();
+  // esquina arredondada com gramado e caminho curvo (como na foto da esquina)
+  c.fillStyle = '#7fa24a'; c.beginPath(); c.arc(px(C[0]), pz(C[1] + 3), pm(7), 0, 6.283); c.fill();
+  c.strokeStyle = '#a99d90'; c.lineWidth = pm(2.2); c.beginPath(); c.arc(px(C[0]), pz(C[1] + 1), pm(4.5), 0.3, 2.9); c.stroke();
+})();
+
+var worldCanvas = document.createElement('canvas'); worldCanvas.width = worldCanvas.height = S;
+var worldTex = new THREE.CanvasTexture(worldCanvas);
+worldTex.encoding = THREE.sRGBEncoding;
+worldTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+function paintLot(c, mode, hl) {
+  c.save(); poly(c, LOT); c.clip();
+  if (mode === 'original') {
+    rectW(c, -80, -100, 60, 40, '#c8673f');
+    speckle(c, -80, -100, 60, 40, ['#b85a35', '#d77a4c', '#e08d5c', '#a9532f', '#c4704a'], 3200, 0.6, 5, 0.55);
+    // marcas de pneu e trilhas de terraplenagem
+    lotFrame(c); c.strokeStyle = 'rgba(120, 50, 25, 0.35)'; c.lineWidth = 0.35;
+    for (var k = 0; k < 26; k++) { var t0 = rand(5, 55); c.beginPath(); c.moveTo(rand(0, 30), t0); c.bezierCurveTo(rand(30, 60), t0 + rand(-14, 14), rand(60, 90), t0 + rand(-14, 14), rand(90, 124), t0 + rand(-10, 10)); c.stroke(); }
+    c.fillStyle = 'rgba(240, 190, 150, 0.35)';
+    for (var p = 0; p < 10; p++) { c.beginPath(); c.ellipse(rand(15, 110), rand(8, 50), rand(4, 10), rand(2, 5), rand(0, 3), 0, 6.283); c.fill(); }
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    // borda com mato (grama e capim nas bordas, como nas fotos)
+    c.save(); poly(c, LOT); c.strokeStyle = 'rgba(110, 140, 60, 0.85)'; c.lineWidth = pm(9); c.stroke(); c.restore();
+    speckle(c, -80, -100, 60, 40, ['#6f8f3f', '#86a24c'], 0, 1, 2, 0.6);
+  } else {
+    rectW(c, -80, -100, 60, 40, '#55585c');
+    lotFrame(c);
+    c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 0.16;
+    var rows = mode === 'towers' ? [] : (mode === 'mall' ? [33, 45] : [50]);
+    rows.forEach(function (t) { for (var s = 2; s < 124; s += 2.6) { c.beginPath(); c.moveTo(s, t - 5); c.lineTo(s, t); c.stroke(); c.beginPath(); c.moveTo(s, t + 0.6); c.lineTo(s, t + 5.6); c.stroke(); } });
+    if (mode === 'market') { for (var s2 = 2; s2 < 124; s2 += 2.6) { c.beginPath(); c.moveTo(s2, 1); c.lineTo(s2, 5); c.stroke(); } }
+    if (mode === 'towers') {
+      c.fillStyle = '#86b257'; c.fillRect(-10, -10, 150, 90);
+      c.fillStyle = '#d9d2c3'; c.fillRect(0, 50, 124, 8); c.fillRect(58, 0, 7, 58);
+      c.fillStyle = '#35b3e3'; c.fillRect(54, 36, 18, 9);
+      c.fillStyle = '#d9d2c3'; c.fillRect(50, 33, 26, 2);
+    }
+    c.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  if (hl) { c.fillStyle = 'rgba(234, 88, 12, 0.32)'; c.fillRect(0, 0, S, S); }
+  c.restore();
+  poly(c, LOT); c.strokeStyle = hl ? '#f97316' : '#e11d1d'; c.lineWidth = pm(1.1); c.stroke();
+}
+function repaint() { var c = worldCanvas.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(base, 0, 0); paintLot(c, state.mode, state.hl); worldTex.needsUpdate = true; }
+
+var tg = new THREE.PlaneGeometry(W, W, 200, 200); tg.rotateX(-Math.PI / 2); tg.translate(CX, 0, CZ);
+(function () { var p = tg.attributes.position; for (var i = 0; i < p.count; i++) p.setY(i, H(p.getX(i), p.getZ(i))); tg.computeVertexNormals(); })();
+var terrain = new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ map: worldTex })); terrain.receiveShadow = true; scene.add(terrain);
+var outer = new THREE.Mesh(new THREE.RingGeometry(W * 0.7, 3400, 64, 1), new THREE.MeshLambertMaterial({ color: 0x3f5f2c }));
+outer.rotation.x = -Math.PI / 2; outer.position.set(CX, 2, CZ); scene.add(outer);
+
+/* ---------- materiais e primitivas ---------- */
+var matCache = {};
+function M(color, extra) { if (!extra && matCache[color]) return matCache[color]; var m = new THREE.MeshLambertMaterial(Object.assign({ color: color }, extra || {})); if (!extra) matCache[color] = m; return m; }
+var asphalt = M(0x404347), white = M(0xf2f2ee), yellow = M(0xf2c230), curb = M(0xd3ccc0);
+function box(w, h, d, mat, x, y, z, parent, ry) {
+  var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y + h / 2, z); if (ry) m.rotation.y = ry; m.castShadow = true; m.receiveShadow = true;
+  (parent || scene).add(m); return m;
+}
+function strip(pts, width, y, mat, opts) {
+  opts = opts || {};
+  pts = opts.raw ? pts : resample(pts, 4);
+  var pos = [], idx = [];
+  for (var i = 0; i < pts.length; i++) {
+    var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    var dx = b[0] - a[0], dz = b[1] - a[1], Ln = Math.hypot(dx, dz) || 1, nx = -dz / Ln * width / 2, nz = dx / Ln * width / 2;
+    var p = pts[i], yy = H(p[0], p[1]) + y;
+    pos.push(p[0] + nx, yy, p[1] + nz, p[0] - nx, yy, p[1] - nz);
+    if (i) { var k = i * 2; idx.push(k - 2, k, k - 1, k - 1, k, k + 1); }
+  }
+  var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+  var mesh = new THREE.Mesh(g, mat); mesh.receiveShadow = true; scene.add(mesh); return mesh;
+}
+function offsetLine(pts, d) {
+  pts = resample(pts, 4);
+  return pts.map(function (p, i) {
+    var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b[0] - a[0], dz = b[1] - a[1], Ln = Math.hypot(dx, dz) || 1;
+    return [p[0] - dz / Ln * d, p[1] + dx / Ln * d];
+  });
+}
+function dashes(pts, off, y, every, len) {
+  pts = offsetLine(pts, off);
+  var mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(len, 0.05, 0.16), white, 600), mm = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), n = 0, acc = 0;
+  for (var i = 1; i < pts.length && n < 600; i++) {
+    var a = pts[i - 1], b = pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc < every) continue; acc = 0;
+    e.set(0, -Math.atan2(b[1] - a[1], b[0] - a[0]), 0); q.setFromEuler(e);
+    mm.compose(new THREE.Vector3((a[0] + b[0]) / 2, H(a[0], a[1]) + y, (a[1] + b[1]) / 2), q, new THREE.Vector3(1, 1, 1)); mesh.setMatrixAt(n++, mm);
+  }
+  mesh.count = n; scene.add(mesh); return mesh;
+}
+function facadeTex(wall, win, floors, cols, opts) {
+  opts = opts || {};
+  var cv = document.createElement('canvas'); cv.width = 256; cv.height = 512; var c = cv.getContext('2d');
+  c.fillStyle = wall; c.fillRect(0, 0, 256, 512);
+  var fh = 512 / floors, cw = 256 / cols;
+  for (var f = 0; f < floors; f++) for (var k = 0; k < cols; k++) {
+    c.fillStyle = win; c.fillRect(k * cw + cw * 0.2, f * fh + fh * 0.28, cw * 0.6, fh * 0.46);
+    if (opts.rail) { c.fillStyle = opts.rail; c.fillRect(k * cw + cw * 0.12, f * fh + fh * 0.76, cw * 0.76, fh * 0.07); }
+  }
+  if (opts.stripes) { c.fillStyle = opts.stripes; opts.at.forEach(function (x) { c.fillRect(x * 256, 0, opts.w * 256, 512); }); }
+  if (opts.base) { c.fillStyle = opts.base; c.fillRect(0, 512 - fh * 0.6, 256, fh * 0.6); }
+  var t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return t;
+}
+function building(w, h, d, x, z, tex, roof, ry, parent, roofTex) {
+  var y = H(x, z) - 1.5, side = new THREE.MeshLambertMaterial({ map: tex }), top = roofTex ? new THREE.MeshLambertMaterial({ map: roofTex }) : M(roof);
+  var m = new THREE.Mesh(new THREE.BoxGeometry(w, h + 1.5, d), [side, side, top, top, side, side]);
+  m.position.set(x, y + (h + 1.5) / 2, z); m.rotation.y = ry || 0; m.castShadow = true; m.receiveShadow = true;
+  (parent || scene).add(m);
+  box(w * 0.3, 2.4, d * 0.25, M(0xe8e6e1), x, y + h + 1.5, z, parent, ry || 0); // casa de máquinas
+  return m;
+}
+
+/* ---------- ruas ---------- */
+strip(AVENUE, 18, 0.1, asphalt);
+dashes(AVENUE, 4.5, 0.14, 9, 3); dashes(AVENUE, -4.5, 0.14, 9, 3);
+strip(offsetLine(AVENUE, 0.25), 0.18, 0.13, yellow, { raw: true }); strip(offsetLine(AVENUE, -0.25), 0.18, 0.13, yellow, { raw: true });
+[[FULVIO, 9], [LINK, 9], [NWST, 9], [CAMILA, 8], [JEANNETTE, 7], [CLINIC_RD, 7]].forEach(function (r) {
+  strip(r[0], r[1], 0.08, asphalt);
+  dashes(r[0], 0, 0.12, 7, 2.2);
+  strip(offsetLine(r[0], r[1] / 2), 0.35, 0.16, curb, { raw: true }); strip(offsetLine(r[0], -r[1] / 2), 0.35, 0.16, curb, { raw: true });
+});
+strip(offsetLine(AVENUE, 9), 0.4, 0.17, curb, { raw: true }); strip(offsetLine(AVENUE, -9), 0.4, 0.17, curb, { raw: true });
+// faixa de pedestres na esquina (como na foto)
+(function () {
+  var g = new THREE.Group(); scene.add(g);
+  var c0 = [C[0] - 10, C[1] + 6], ang = Math.atan2(0.674, 0.739);
+  for (var k = -4; k <= 4; k++) { var b = box(0.5, 0.04, 3.2, white, 0, 0.12, 0, g); b.position.set(c0[0] + Math.cos(ang) * k * 1.1 - 5.4, 0.14, c0[1] - Math.sin(ang) * k * 1.1 - 4.2); b.rotation.y = -0.73 + Math.PI / 2; }
+})();
+
+/* ---------- postes e fiação ao longo do lote ---------- */
+(function () {
+  var pole = M(0xb5afa5), wireMat = new THREE.LineBasicMaterial({ color: 0x222222 });
+  function polesAlong(p0, p1, out, n) {
+    var tops = [];
+    for (var k = 0; k <= n; k++) {
+      var x = p0[0] + (p1[0] - p0[0]) * k / n + out[0], z = p0[1] + (p1[1] - p0[1]) * k / n + out[1], y = H(x, z);
+      box(0.45, 11, 0.45, pole, x, y, z);
+      box(2.4, 0.18, 0.2, pole, x, y + 10.2, z, null, -Math.atan2(p1[1] - p0[1], p1[0] - p0[0]) + Math.PI / 2);
+      box(0.5, 0.35, 0.35, M(0x8a8f96), x, y + 9.2, z);
+      tops.push([x, y, z]);
+    }
+    [10.4, 9.8, 8.4, 7.6].forEach(function (hh, wi) {
+      for (var i = 1; i < tops.length; i++) {
+        var a = tops[i - 1], b = tops[i], pts = [];
+        for (var s = 0; s <= 8; s++) { var t = s / 8, sag = Math.sin(Math.PI * t) * 0.9; pts.push(new THREE.Vector3(a[0] + (b[0] - a[0]) * t + (wi - 1.5) * 0.4, a[1] + hh - sag, a[2] + (b[2] - a[2]) * t)); }
+        scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat));
+      }
+    });
+  }
+  polesAlong(D, C, [-0.674 * 4, 0.739 * 4], 3);
+  polesAlong(C, B, [0.637 * 4, 0.77 * 4], 2);
+  polesAlong(A, B, [0.659 * 4, -0.752 * 4], 4);
+  // placa de pedestre amarela e placa de venda verde no lote
+  box(0.12, 3, 0.12, M(0x8a8f96), C[0] - 4, 0, C[1] + 4);
+  box(0.9, 0.9, 0.05, M(0xf5c518), C[0] - 4, 2.6, C[1] + 4, null, 0.7);
+  var cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; var c = cv.getContext('2d');
+  c.fillStyle = '#16a34a'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#fff'; c.font = '700 44px Sora, sans-serif'; c.textAlign = 'center'; c.fillText('VENDE-SE', 128, 62); c.font = '600 22px Inter, sans-serif'; c.fillText('TERRENO DE ESQUINA', 128, 98);
+  var sign = new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(cv) });
+  var sp = L(70, 54);
+  var g = new THREE.Group(); g.position.set(sp[0], H(sp[0], sp[1]), sp[1]); g.rotation.y = -TH + Math.PI; scene.add(g);
+  box(0.15, 3.2, 0.15, M(0x777777), -1.4, 0, 0, g); box(0.15, 3.2, 0.15, M(0x777777), 1.4, 0, 0, g);
+  var pl = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.7, 0.08), [M(0x16a34a), M(0x16a34a), M(0x16a34a), M(0x16a34a), sign, sign]); pl.position.set(0, 3.3, 0); pl.castShadow = true; g.add(pl);
+})();
+
+/* ---------- vizinhança ---------- */
+var parked = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1.5, 4.4), M(0xffffff), 400);
+parked.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(400 * 3), 3); parked.count = 0; parked.castShadow = true; scene.add(parked);
+var carColors = [0xf5f5f5, 0x1f2937, 0x9ca3af, 0xb91c1c, 0xe5e7eb, 0x374151, 0xd4d4d8, 0x1d4ed8, 0xf8fafc];
+var _m4 = new THREE.Matrix4(), _q4 = new THREE.Quaternion(), _c4 = new THREE.Color();
+function park(x, z, ry) { if (parked.count >= 400) return; _q4.setFromEuler(new THREE.Euler(0, ry || 0, 0)); _m4.compose(new THREE.Vector3(x, H(x, z) + 0.75, z), _q4, new THREE.Vector3(1, 1, 1)); parked.setMatrixAt(parked.count, _m4); parked.setColorAt(parked.count, _c4.setHex(pick(carColors))); parked.count++; }
+
+// Smart Fit Parque Mosaico: galpão comercial comprido, fachada escura com faixa amarela
+(function () {
+  var cv = document.createElement('canvas'); cv.width = 1024; cv.height = 128; var c = cv.getContext('2d');
+  c.fillStyle = '#3a3d42'; c.fillRect(0, 0, 1024, 128);
+  c.fillStyle = '#f5c518'; c.fillRect(0, 28, 1024, 12);
+  c.fillStyle = '#1c1f24'; for (var i = 0; i < 24; i++) c.fillRect(10 + i * 42, 56, 34, 72);
+  c.fillStyle = '#f5c518'; c.font = '700 26px Sora, sans-serif'; c.fillText('SMART FIT', 430, 22);
+  var tex = new THREE.CanvasTexture(cv); tex.encoding = THREE.sRGBEncoding;
+  var dark = M(0x2f3236), front = new THREE.MeshLambertMaterial({ map: tex }), roof = M(0xd9dadc);
+  var ry = Math.atan2(-0.357, 0.934); // eixo longo ao longo da rua NO
+  var m = new THREE.Mesh(new THREE.BoxGeometry(18, 8, 96), [front, dark, roof, dark, dark, dark]);
+  m.position.set(-92, H(-92, -66) + 3.5, -66); m.rotation.y = ry; m.castShadow = m.receiveShadow = true; scene.add(m);
+  for (var k = 0; k < 40; k++) { var s = rand(-44, 44); park(-73 + -0.357 * s + rand(-1, 1) * 0.934 * 4, -62 + 0.934 * s + rand(-1, 1) * 0.357 * 4, ry); }
+})();
+
+// condomínios Vista das Paineiras / Vista dos Jacarandás (blocos claros de 5 a 8 andares, muro branco)
+var condoTexA = facadeTex('#eceae5', '#4b5866', 8, 6, { rail: '#9aa3ab' });
+var condoTexB = facadeTex('#e9e6df', '#56606b', 6, 6, { rail: '#b07a5a', stripes: '#9c5f3f', at: [0.47], w: 0.06 });
+(function () {
+  var ry = -TH;
+  for (var x = -6; x < 150; x += 24) for (var z = -205; z < -20; z += 46) {
+    var cx = x + rand(-2, 2), cz = z + rand(-2, 2);
+    if (distPoly(FULVIO, cx, cz) < 22 || distPoly(CAMILA, cx, cz) < 16 || distPoly(JEANNETTE, cx, cz) < 16) continue;
+    var nf = (cx - A[0] - 5.9) * 0.659 + (cz - A[1] + 6.8) * -0.752; if (nf < 10) continue; // só do lado NE da R. Fúlvio
+    var camX = 100 + (cz + 225) * 0.2; if (cz > -125) camX = 120 + (cz + 125) * 0.4; if (cx > camX - 12) continue;
+    building(13, R() < 0.5 ? 17 : 23, 34, cx, cz, R() < 0.5 ? condoTexA : condoTexB, 0xd8d6d0, ry + (R() < 0.3 ? Math.PI / 2 : 0));
+    if (R() < 0.6) park(cx + 10, cz + rand(-8, 8), ry);
+  }
+  for (var x2 = 8; x2 < 100; x2 += 22) for (var z2 = -360; z2 < -245; z2 += 50) building(14, 15, 42, x2, z2, condoTexA, 0xd8d6d0, 0);
+  // muro branco dos condomínios ao longo da R. Fúlvio
+  var wall = offsetLine(FULVIO.slice(4, 8), -7.5);
+  for (var i = 1; i < wall.length; i++) { var a = wall[i - 1], b = wall[i], mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2; box(Math.hypot(b[0] - a[0], b[1] - a[1]) + 0.1, 2.6, 0.3, M(0xeeeeea), mx, H(mx, mz), mz, null, -Math.atan2(b[1] - a[1], b[0] - a[0])); }
+  // piscinas
+  [[38, -150], [70, -100], [20, -265]].forEach(function (p) { box(16, 0.2, 8, M(0x38bdf8), p[0], H(p[0], p[1]), p[1], null, -TH); });
+})();
+
+// Prime Vivendas do Parque: torre branca com painéis azul-marinho + blocos de 8 andares
+(function () {
+  var towerTex = facadeTex('#f1f0ec', '#3a4654', 12, 5, { stripes: '#1f2a44', at: [0, 0.8], w: 0.2 });
+  var ry = Math.atan2(0.637, 0.770);
+  building(22, 38, 17, 40, 48, towerTex, 0xd9d9d6, ry);
+  var blk = facadeTex('#eeece7', '#4b5866', 8, 6, { rail: '#a46a4c', stripes: '#a46a4c', at: [0.3, 0.64], w: 0.05 });
+  [[78, 28], [108, 24], [138, 22], [168, 26], [82, 74], [118, 70], [152, 72]].forEach(function (p) { building(30, 24, 13, p[0], p[1], blk, 0xd9d9d6, ry * 0.4); park(p[0], p[1] + 12, 0); });
+  var wall = [[20, 58], [62, 12], [190, 10]];
+  for (var i = 1; i < wall.length; i++) { var a = wall[i - 1], b = wall[i], mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2; box(Math.hypot(b[0] - a[0], b[1] - a[1]), 2.8, 0.3, M(0xe9e8e4), mx, H(mx, mz), mz, null, -Math.atan2(b[1] - a[1], b[0] - a[0])); }
+})();
+
+// do outro lado da avenida: obra com tapume escuro e placa vermelha, posto de saúde
+(function () {
+  var fence = [[-86, -12], [-14, 54]];
+  for (var i = 0; i < 1; i++) { var a = fence[0], b = fence[1], mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2; box(Math.hypot(b[0] - a[0], b[1] - a[1]), 2.4, 0.2, M(0x2a2c30), mx, 0, mz, null, -Math.atan2(b[1] - a[1], b[0] - a[0])); }
+  var cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; var c = cv.getContext('2d');
+  c.fillStyle = '#c81e1e'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#ffe14d'; c.font = '800 40px Sora, sans-serif'; c.fillText('SUPER', 20, 56); c.fillStyle = '#fff'; c.font = '700 24px Inter, sans-serif'; c.fillText('OFERTAS', 22, 96);
+  var sm = new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(cv) }), red = M(0xc81e1e);
+  var bb = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4, 8), [sm, sm, red, red, red, red]); bb.position.set(-45, 6, 22); bb.rotation.y = -0.6; bb.castShadow = true; scene.add(bb);
+  box(0.4, 4, 0.4, M(0x777777), -45, 0, 22);
+  box(12, 4, 10, M(0xf1f1ef), -60, 0, 24); box(8, 3, 14, M(0xe7e3db), -70, 0, 30);
+  var clinic = facadeTex('#f3f3f1', '#4b6a88', 2, 10, { base: '#c62828' });
+  building(42, 5, 16, -38, 80, clinic, 0xdedede, 0);
+  for (var k = 0; k < 14; k++) park(rand(-60, -10), rand(70, 72), Math.PI / 2);
+  building(30, 7, 22, -184, 76, facadeTex('#e6e4df', '#3b4a5a', 2, 10), 0xcfd2d6, 0.2);
+  for (var j = 0; j < 30; j++) park(rand(-210, -160), rand(40, 115), 0);
+})();
+
+// loteamento de casas (telhado cerâmico)
+var houses = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), M(0xffffff), 1400);
+houses.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(1400 * 3), 3); houses.count = 0; houses.castShadow = houses.receiveShadow = true; scene.add(houses);
+(function () {
+  var pal = [0xb4543a, 0xc0643f, 0xa94a35, 0xd2775a, 0xb65d45, 0xe8e2d6, 0x9e4a38], q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -0.08, 0));
+  function house(x, z, w, h, d) { if (houses.count >= 1400) return; _m4.compose(new THREE.Vector3(x, H(x, z) + h / 2 - 0.2, z), q, new THREE.Vector3(w, h, d)); houses.setMatrixAt(houses.count, _m4); houses.setColorAt(houses.count, _c4.setHex(pick(pal))); houses.count++; }
+  for (var x = 140; x < 300; x += 10.5) for (var z = -370; z < -30; z += 13) {
+    if ((Math.round((z + 370) / 13) % 5) === 4) continue; // ruas internas
+    var lim = x < 175 ? -120 + (x - 140) * 2 : -40; if (z > lim) continue;
+    house(x + rand(-0.6, 0.6), z, rand(7.5, 9.5), rand(3.5, 6.5), rand(9, 11.5));
+  }
+  for (var n = 0; n < 380; n++) house(rand(-400, 450), rand(-560, -440), rand(7, 12), rand(3, 7), rand(7, 12));
+  for (var t = 0; t < 14; t++) { var hx = rand(-300, 400), hz = rand(-600, -480); _m4.compose(new THREE.Vector3(hx, H(hx, hz) + 15, hz), q, new THREE.Vector3(18, 30, 22)); if (houses.count < 1400) { houses.setMatrixAt(houses.count, _m4); houses.setColorAt(houses.count, _c4.setHex(0xe6e4df)); houses.count++; } }
+})();
+
+/* ---------- vegetação ---------- */
+var greens = [0x2c5522, 0x386628, 0x44752e, 0x27491d, 0x4f7f33, 0x3b6c2a, 0x335f24];
+function treeLayer(max, detail) {
+  var mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, detail), new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }), max);
+  mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(max * 3), 3);
+  mesh.castShadow = true; mesh.receiveShadow = true; mesh.count = 0;
+  var q = new THREE.Quaternion();
+  mesh.add_ = function (x, z, r, hex, sq, lift) {
+    if (mesh.count >= max) return; sq = sq || 0.85;
+    q.setFromEuler(new THREE.Euler(0, R() * 6, 0));
+    _m4.compose(new THREE.Vector3(x, H(x, z) + r * sq * 0.9 + (lift || 0), z), q, new THREE.Vector3(r, r * sq, r));
+    mesh.setMatrixAt(mesh.count, _m4); mesh.setColorAt(mesh.count, _c4.setHex(hex || pick(greens)).offsetHSL(0, 0, rand(-0.04, 0.04))); mesh.count++;
+  };
+  scene.add(mesh); return mesh;
+}
+var forest = treeLayer(9000, 0), small = treeLayer(1400, 1);
+function developed(x, z) {
+  if (distPoly(AVENUE, x, z) < 15) return true;
+  if (distPoly(FULVIO, x, z) < 10 || distPoly(LINK, x, z) < 10 || distPoly(NWST, x, z) < 10 || distPoly(CAMILA, x, z) < 9 || distPoly(CLINIC_RD, x, z) < 8) return true;
+  if (pip(LOT, x, z) || distPoly(LOT.concat([A]), x, z) < 8) return true;
+  if (pip([[-12, -215], [104, -222], [122, -125], [152, -50], [168, 0], [66, 0], [-30, -92], [-28, -170]], x, z)) return true;
+  if (x > -14 && x < 112 && z > -372 && z < -228) return true;
+  if (pip([[108, -380], [300, -380], [320, -40], [175, -8], [128, -120]], x, z)) return true;
+  if (pip([[20, 52], [62, 6], [190, 6], [195, 100], [55, 105]], x, z)) return true;
+  if (x > -94 && x < 45 && z > -14 && z < 180 && x < 0.5 * z + 30) return true;
+  if (x > -120 && x < -60 && z > -125 && z < -15) return true;
+  if (x > -215 && x < -150 && z > 30 && z < 124) return true;
+  if (z < -430 && z > -620) return R() > 0.12;
+  return false;
+}
+var lotShrubs = [];
+(function fillForest() {
+  var tries = 0;
+  while (forest.count < 8600 && tries < 70000) { tries++; var x = rand(-480, 520), z = rand(-560, 460); if (developed(x, z)) continue; forest.add_(x, z, rand(3.5, 7.8)); }
+  // árvores jovens nas calçadas e palmeiras do outro lado da avenida
+  [[D, C, [-0.674, 0.739]], [C, B, [0.637, 0.77]], [A, B, [0.659, -0.752]], [A, D, [-0.934, -0.357]]].forEach(function (e) {
+    var Ln = Math.hypot(e[1][0] - e[0][0], e[1][1] - e[0][1]);
+    for (var s = 6; s < Ln - 4; s += 11) { var x = e[0][0] + (e[1][0] - e[0][0]) * s / Ln + e[2][0] * 4.3, z = e[0][1] + (e[1][1] - e[0][1]) * s / Ln + e[2][1] * 4.3; small.add_(x, z, rand(0.9, 1.3), 0x4f8a2e, 1.1, 1.2); }
+  });
+  // capim e touceiras nas bordas do lote (como nas fotos)
+  for (var k = 0; k < 520; k++) {
+    var s = rand(0, 1), e = pick([[A, B], [B, C], [C, D], [D, A]]), x0 = e[0][0] + (e[1][0] - e[0][0]) * s, z0 = e[0][1] + (e[1][1] - e[0][1]) * s;
+    var cx = (A[0] + B[0] + C[0] + D[0]) / 4, cz = (A[1] + B[1] + C[1] + D[1]) / 4, f = rand(0.01, 0.09);
+    var x = x0 + (cx - x0) * f, z = z0 + (cz - z0) * f;
+    if (inLot(x, z)) lotShrubs.push([x, z, rand(0.5, 1.4)]);
+  }
+})();
+var shrubMesh = treeLayer(600, 1);
+(function () { for (var i = 0; i < lotShrubs.length; i++) shrubMesh.add_(lotShrubs[i][0], lotShrubs[i][1], lotShrubs[i][2], pick([0x5d7f2e, 0x6e8f38, 0x7b9a40, 0x4f7027]), 0.55); })();
+// palmeiras do outro lado da avenida
+(function () {
+  var trunk = M(0x8b7355), crown = M(0x3f7d2c, { side: THREE.DoubleSide });
+  [[-75, 4], [-56, 20], [-40, 34], [-26, 46], [30, 108], [36, 125]].forEach(function (p) {
+    var h = rand(8, 11); box(0.4, h, 0.4, trunk, p[0], H(p[0], p[1]), p[1]);
+    var cr = new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.6, 8, 1, true), crown); cr.rotation.x = Math.PI; cr.position.set(p[0], H(p[0], p[1]) + h + 0.3, p[1]); cr.castShadow = true; scene.add(cr);
+  });
+})();
+
+// nuvens
+(function () {
+  var cm = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0xa9b6c2, transparent: true, opacity: 0.93, fog: false }), g = new THREE.SphereGeometry(1, 12, 8);
+  for (var i = 0; i < 18; i++) { var cx = rand(-1600, 1600), cz = rand(-2000, 1200), cy = rand(360, 560); if (Math.hypot(cx, cz) < 500) continue; for (var k = 0; k < 6; k++) { var s = rand(35, 80), m = new THREE.Mesh(g, cm); m.scale.set(s * 1.6, s * 0.55, s); m.position.set(cx + rand(-100, 100), cy + rand(-15, 15), cz + rand(-60, 60)); scene.add(m); } }
+})();
+
+/* ---------- contorno do lote ---------- */
+var outlineMat = new THREE.MeshBasicMaterial({ color: 0xf97316, side: THREE.DoubleSide });
+strip(LOT.concat([A]), 0.9, 0.35, outlineMat);
+LOT.forEach(function (p) { var m = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 4, 8), outlineMat); m.position.set(p[0], H(p[0], p[1]) + 2, p[1]); scene.add(m); });
+
+/* ---------- simulações ---------- */
+var dev = { mall: new THREE.Group(), market: new THREE.Group(), towers: new THREE.Group() };
+Object.keys(dev).forEach(function (k) { dev[k].visible = false; scene.add(dev[k]); });
+function at(s, t) { var p = L(s, t); return p; }
+function lbox(group, s0, s1, t0, t1, h, mats) {
+  var p = at((s0 + s1) / 2, (t0 + t1) / 2), m = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, h, t1 - t0), mats);
+  m.position.set(p[0], H(p[0], p[1]) + h / 2, p[1]); m.rotation.y = -TH; m.castShadow = m.receiveShadow = true; group.add(m); return m;
+}
+var parkedDev = {};
+(function () {
+  function storefront(color, n) {
+    var cv = document.createElement('canvas'); cv.width = 1024; cv.height = 128; var c = cv.getContext('2d');
+    c.fillStyle = '#f6f5f2'; c.fillRect(0, 0, 1024, 128); c.fillStyle = color; c.fillRect(0, 34, 1024, 12);
+    c.fillStyle = '#25303c'; for (var i = 0; i < n; i++) c.fillRect(8 + i * (1024 / n), 56, 1024 / n - 14, 72);
+    var t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return new THREE.MeshLambertMaterial({ map: t });
+  }
+  var plain = M(0xf1f1ef), roof = M(0xdcdddf);
+  // centro comercial em L: lojas ao longo da R. Fúlvio e da lateral NO, estacionamento voltado para a avenida
+  var sf = storefront('#b4532a', 18);
+  lbox(dev.mall, 8, 118, 3, 22, 9, [plain, plain, roof, roof, sf, plain]);
+  lbox(dev.mall, 22, 34, 22, 40, 9, [sf, plain, roof, roof, plain, plain]);
+  var totem = at(108, 54); box(1.2, 9, 3, M(0xb4532a), totem[0], H(totem[0], totem[1]), totem[1], dev.mall, -TH);
+  // supermercado
+  var mk = storefront('#16a34a', 8);
+  lbox(dev.market, 30, 104, 8, 40, 11, [plain, plain, roof, roof, mk, plain]);
+  lbox(dev.market, 58, 76, 40, 44, 4, [M(0x16a34a), M(0x16a34a), M(0x16a34a), M(0x16a34a), M(0x16a34a), M(0x16a34a)]);
+  // torres residenciais
+  var tt = facadeTex('#f4f1ea', '#5f7891', 22, 6, { rail: '#cfc6b6' });
+  [[34, 26], [92, 26]].forEach(function (p) { var w = at(p[0], p[1]); building(22, 66, 20, w[0], w[1], tt, 0xd6d0c4, -TH, dev.towers); });
+  var kiosk = at(62, 24); box(12, 4, 8, M(0xf2ede4), kiosk[0], H(kiosk[0], kiosk[1]), kiosk[1], dev.towers, -TH);
+  // carros estacionados nas simulações
+  ['mall', 'market'].forEach(function (k) {
+    var mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1.5, 4.4), M(0xffffff), 160); mesh.castShadow = true; mesh.count = 160;
+    var n = 0, rows = k === 'mall' ? [30.5, 36, 42.5, 48] : [47.5, 53, 3];
+    rows.forEach(function (t) { for (var s = 3.3; s < 122 && n < 160; s += 2.6) { if (R() < 0.45) continue; var p = at(s, t); if (!inLot(p[0], p[1], 1.5)) continue; _q4.setFromEuler(new THREE.Euler(0, -TH, 0)); _m4.compose(new THREE.Vector3(p[0], 0.85, p[1]), _q4, new THREE.Vector3(1, 1, 1)); mesh.setMatrixAt(n, _m4); mesh.setColorAt(n, _c4.setHex(pick(carColors))); n++; } });
+    mesh.count = n; dev[k].add(mesh);
+  });
+})();
+
+/* ---------- trânsito ---------- */
+function makePath(pts) { pts = resample(pts, 3); var acc = [0]; for (var i = 1; i < pts.length; i++) acc.push(acc[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts: pts, acc: acc, len: acc[acc.length - 1] }; }
+function pathAt(P, d) {
+  d = ((d % P.len) + P.len) % P.len; var lo = 1, hi = P.acc.length - 1;
+  while (lo < hi) { var mid = (lo + hi) >> 1; if (P.acc[mid] < d) lo = mid + 1; else hi = mid; }
+  var a = P.pts[lo - 1], b = P.pts[lo], t = (d - P.acc[lo - 1]) / ((P.acc[lo] - P.acc[lo - 1]) || 1);
+  return { x: a[0] + (b[0] - a[0]) * t, z: a[1] + (b[1] - a[1]) * t, ang: Math.atan2(b[1] - a[1], b[0] - a[0]) };
+}
+var paths = { av: makePath(AVENUE), fu: makePath(FULVIO), li: makePath(LINK.concat([[70, -4]])) };
+var traffic = [];
+(function () {
+  for (var i = 0; i < 46; i++) { var dir = i % 2 ? 1 : -1; traffic.push({ P: paths.av, d: rand(0, paths.av.len), v: rand(10, 15) * dir, off: dir * (R() < 0.5 ? 2.2 : 6.6) }); }
+  for (var j = 0; j < 16; j++) { var d2 = j % 2 ? 1 : -1; traffic.push({ P: paths.fu, d: rand(0, paths.fu.len), v: rand(6, 9) * d2, off: d2 * 2.2 }); }
+  for (var k = 0; k < 2; k++) traffic.push({ P: paths.li, d: rand(0, paths.li.len), v: 5, off: 2.2 });
+})();
+var movers = new THREE.InstancedMesh(new THREE.BoxGeometry(4.4, 1.5, 1.95), M(0xffffff), traffic.length); movers.castShadow = true; scene.add(movers);
+traffic.forEach(function (c, i) { c.bus = c.P === paths.av && R() < 0.08; movers.setColorAt(i, _c4.setHex(c.bus ? 0xf8fafc : pick(carColors))); });
+var _v = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler();
+function updateTraffic(dt) {
+  for (var i = 0; i < traffic.length; i++) {
+    var c = traffic[i]; c.d += c.v * dt;
+    if (c.P === paths.li && c.d > c.P.len) c.d = 0;
+    var p = pathAt(c.P, c.d), ang = p.ang + (c.v < 0 ? Math.PI : 0);
+    var ox = -Math.sin(p.ang) * c.off, oz = Math.cos(p.ang) * c.off;
+    _e.set(0, -ang, 0); _q4.setFromEuler(_e);
+    _v.set(p.x + ox, H(p.x, p.z) + (c.bus ? 1.6 : 0.85), p.z + oz); _s.set(c.bus ? 2.6 : 1, c.bus ? 2.1 : 1, c.bus ? 1.3 : 1);
+    _m4.compose(_v, _q4, _s); movers.setMatrixAt(i, _m4);
+  }
+  movers.instanceMatrix.needsUpdate = true;
+}
+
+/* ---------- rótulos ---------- */
+var labelsEl = document.getElementById('labels'), labels = [];
+function label(html, x, y, z, cls) { var el = document.createElement('div'); el.className = 'lbl ' + (cls || ''); el.innerHTML = html; labelsEl.appendChild(el); var o = { el: el, p: new THREE.Vector3(x, y, z), cls: cls || '' }; labels.push(o); return o; }
+var ctr = L(62, 40);
+var bigLabel = label('≈ 6.300 m²<small>Terreno de esquina à venda</small>', ctr[0], 9, ctr[1], 'big');
+label('Av. José Moacir Teberga de Toledo', 22, 2, 108, 'road');
+label('R. Fúlvio Pennachi', 85, 2, -3, 'road');
+label('Smart Fit Parque Mosaico', -92, 13, -66);
+label('Prime Vivendas do Parque', 40, 44, 48);
+label('Vista das Paineiras', 30, 26, -125);
+label('Vista dos Jacarandás', 100, 30, -60);
+label('USF Walid Abdel Aziz', -38, 10, 80);
+(function () {
+  function mid(a, b, o) { return [(a[0] + b[0]) / 2 + o[0], (a[1] + b[1]) / 2 + o[1]]; }
+  var m1 = mid(D, C, [-1, 1]), m2 = mid(A, B, [1, -1]), m3 = mid(B, C, [1, 1]), m4 = mid(A, D, [-1, 0]);
+  label('≈ 93 m', m1[0], 2.5, m1[1], 'dim'); label('≈ 124 m', m2[0], 2.5, m2[1], 'dim');
+  label('≈ 60 m', m3[0], 2.5, m3[1], 'dim'); label('≈ 62 m', m4[0], 2.5, m4[1], 'dim');
+})();
+var _pv = new THREE.Vector3();
+function updateLabels() {
+  var w = window.innerWidth, h = window.innerHeight;
+  for (var i = 0; i < labels.length; i++) {
+    var Lb = labels[i];
+    if (Lb === bigLabel && !state.hl) { Lb.el.hidden = true; continue; }
+    _pv.copy(Lb.p).project(camera);
+    var vis = _pv.z < 1 && _pv.x > -1.1 && _pv.x < 1.1 && _pv.y > -1.1 && _pv.y < 1.1;
+    var d = camera.position.distanceTo(Lb.p);
+    if (Lb.cls === 'dim' && d > 700) vis = false;
+    if (Lb.cls === '' && d < 40) vis = false;
+    Lb.el.hidden = !vis;
+    if (vis) Lb.el.style.transform = 'translate(' + ((_pv.x + 1) / 2 * w).toFixed(1) + 'px,' + ((1 - _pv.y) / 2 * h).toFixed(1) + 'px) translate(-50%,-100%)';
+  }
+}
+
+/* ---------- estado / interface ---------- */
+var state = { mode: 'original', hl: true };
+function setMode(mode) {
+  state.mode = mode;
+  shrubMesh.visible = mode === 'original';
+  Object.keys(dev).forEach(function (k) { dev[k].visible = k === mode; });
+  document.querySelectorAll('[data-mode]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mode === mode ? 'true' : 'false'); });
+  repaint();
+}
+function setHL(on) { state.hl = on; outlineMat.color.setHex(on ? 0xf97316 : 0xe11d1d); document.getElementById('hl').setAttribute('aria-pressed', on ? 'true' : 'false'); repaint(); }
+
+var VIEWS = {
+  drone: { p: [-175, 125, 150], t: [-8, 0, -25] },
+  top: { p: [-8, 520, -12], t: [-8, 0, -28] },
+  corner: { p: [2.6, 1.7, 41.5], t: [-30, 4, -40] },
+  walk: { p: [-5.5, 1.7, 30.5], t: [-72, 5, -32] },
+  back: { p: [110, 130, -200], t: [-8, 0, -20] }
+};
+var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, tween = null;
+function goView(name, instant) {
+  var v = VIEWS[name];
+  document.querySelectorAll('[data-view]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.view === name ? 'true' : 'false'); });
+  var p1 = new THREE.Vector3().fromArray(v.p), t1 = new THREE.Vector3().fromArray(v.t);
+  if (window.innerWidth < 640 && (name === 'drone' || name === 'back' || name === 'top')) p1.sub(t1).multiplyScalar(1.5).add(t1);
+  if (instant || reduceMotion) { camera.position.copy(p1); controls.target.copy(t1); controls.update(); return; }
+  tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: p1, t1: t1, k: 0 };
+}
+document.querySelectorAll('[data-view]').forEach(function (b) { b.addEventListener('click', function () { goView(b.dataset.view); }); });
+document.querySelectorAll('[data-mode]').forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode); }); });
+document.getElementById('hl').addEventListener('click', function () { setHL(!state.hl); });
+var spinBtn = document.getElementById('spin');
+spinBtn.addEventListener('click', function () { controls.autoRotate = !controls.autoRotate; spinBtn.setAttribute('aria-pressed', controls.autoRotate ? 'true' : 'false'); });
+controls.addEventListener('start', function () { tween = null; });
+var card = document.getElementById('card'), tc = document.getElementById('toggleCard');
+tc.addEventListener('click', function () { var c = card.classList.toggle('collapsed'); tc.textContent = c ? 'Ver detalhes' : 'Ocultar detalhes'; tc.setAttribute('aria-expanded', c ? 'false' : 'true'); });
+if (window.innerWidth >= 640) card.classList.remove('collapsed');
+window.addEventListener('resize', function () { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+var rose = document.getElementById('compassRose');
+setMode('original'); setHL(true); goView('drone', true);
+document.getElementById('loading').hidden = true;
+
+var clock = new THREE.Clock();
+function frame() {
+  var dt = Math.min(clock.getDelta(), 0.05);
+  if (tween) { tween.k = Math.min(1, tween.k + dt / 1.6); var e = smooth(tween.k); camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.t0, tween.t1, e); if (tween.k >= 1) tween = null; }
+  controls.update();
+  if (!reduceMotion) updateTraffic(dt); else if (!frame.once) { updateTraffic(0); frame.once = true; }
+  var az = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z);
+  rose.style.transform = 'rotate(' + (az * 180 / Math.PI).toFixed(1) + 'deg)';
+  renderer.render(scene, camera); updateLabels();
+  requestAnimationFrame(frame);
+}
+frame();
+window.__ready = true;
+})();
+</script>
+</body>
+</html>
