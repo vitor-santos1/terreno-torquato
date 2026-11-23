@@ -117,13 +117,12 @@ body { background: var(--bg); color: var(--ink); font-family: var(--body); overf
 
 <section class="card collapsed" id="card" aria-label="Dados do terreno">
   <div class="eyebrow">Terreno de esquina · Parque Mosaico · Manaus/AM</div>
-  <h1>Av. José Moacir Teberga de Toledo × R. Fúlvio Pennachi</h1>
-  <div class="area"><b>≈ 6.300 m²</b><span>estimativa por satélite</span></div>
+  <h1>Esquina da Av. José Moacir Teberga de Toledo</h1>
+  <div class="area"><b>≈ 900 m²</b><span>estimativa por satélite</span></div>
   <dl class="facts">
-    <dt>Frente avenida</dt><dd>≈ 93 m</dd>
-    <dt>Frente R. Fúlvio</dt><dd>≈ 124 m</dd>
-    <dt>Laterais</dt><dd>≈ 60 m e ≈ 62 m</dd>
-    <dt>Situação</dt><dd>Plano, terraplenado, quadra inteira cercada por ruas</dd>
+    <dt>Frente avenida</dt><dd>≈ 30 m</dd>
+    <dt>Frente rua lateral</dt><dd>≈ 30 m</dd>
+    <dt>Situação</dt><dd>Lote de esquina, plano e terraplenado, na ponta da quadra voltada para a avenida</dd>
     <dt>Vizinhança</dt><dd>Smart Fit Parque Mosaico, Prime Vivendas do Parque, condomínios Vista das Paineiras e Vista dos Jacarandás, USF Walid Abdel Aziz</dd>
   </dl>
   <p class="note">Modelo ilustrativo montado a partir das fotos do local e da imagem de satélite. Área e medidas são aproximadas. Confirme na matrícula do imóvel. Arraste para girar e use dois dedos ou a roda do mouse para zoom.</p>
@@ -154,9 +153,8 @@ body { background: var(--bg); color: var(--ink); font-family: var(--body); overf
     <div class="row" role="group" aria-label="Simulação de uso">
       <span class="row-label">Simular</span>
       <button class="btn" id="m-original" data-mode="original" aria-pressed="true" type="button">Terreno atual</button>
-      <button class="btn" id="m-mall" data-mode="mall" aria-pressed="false" type="button">Centro comercial</button>
-      <button class="btn" id="m-market" data-mode="market" aria-pressed="false" type="button">Supermercado</button>
-      <button class="btn" id="m-towers" data-mode="towers" aria-pressed="false" type="button">Torres residenciais</button>
+      <button class="btn" id="m-shop" data-mode="shop" aria-pressed="false" type="button">Loja de esquina</button>
+      <button class="btn" id="m-office" data-mode="office" aria-pressed="false" type="button">Prédio comercial</button>
     </div>
   </div>
 </nav>
@@ -199,6 +197,11 @@ var A = [-44, -87.5], B = [49, -6], C = [2.5, 32.5], D = [-66, -30];
 var LOT = [A, B, C, D];
 var U = [0.752, 0.659], V = [-0.659, 0.752], TH = Math.atan2(U[1], U[0]);
 function L(s, t) { return [A[0] + U[0] * s + V[0] * t, A[1] + U[1] * s + V[1] * t]; } // s ao longo da R. Fúlvio, t em direção à avenida
+// Terreno à venda: só o quadrado da esquina (avenida × rua de ligação), ≈ 30 m × 30 m
+var AH = [-0.739, -0.674], BH = [0.770, -0.637], SQN = 30, PHI = Math.atan2(0.674, -0.739);
+function Q(s, t) { return [C[0] + AH[0] * s + BH[0] * t, C[1] + AH[1] * s + BH[1] * t]; } // s ao longo da avenida, t ao longo da rua lateral
+var SQ = [Q(0, 0), Q(SQN, 0), Q(SQN, SQN), Q(0, SQN)];
+function sqFrame(c) { c.setTransform(K * AH[0], K * AH[1], K * BH[0], K * BH[1], px(C[0]), pz(C[1])); }
 function inLot(x, z, m) {
   if (!pip(LOT, x, z)) return false;
   return !m || distPoly(LOT.concat([A]), x, z) > m;
@@ -305,37 +308,29 @@ worldTex.encoding = THREE.sRGBEncoding;
 worldTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
 function paintLot(c, mode, hl) {
+  // a quadra toda é terra terraplenada
   c.save(); poly(c, LOT); c.clip();
-  if (mode === 'original') {
-    rectW(c, -80, -100, 60, 40, '#c8673f');
-    speckle(c, -80, -100, 60, 40, ['#b85a35', '#d77a4c', '#e08d5c', '#a9532f', '#c4704a'], 3200, 0.6, 5, 0.55);
-    // marcas de pneu e trilhas de terraplenagem
-    lotFrame(c); c.strokeStyle = 'rgba(120, 50, 25, 0.35)'; c.lineWidth = 0.35;
-    for (var k = 0; k < 26; k++) { var t0 = rand(5, 55); c.beginPath(); c.moveTo(rand(0, 30), t0); c.bezierCurveTo(rand(30, 60), t0 + rand(-14, 14), rand(60, 90), t0 + rand(-14, 14), rand(90, 124), t0 + rand(-10, 10)); c.stroke(); }
-    c.fillStyle = 'rgba(240, 190, 150, 0.35)';
-    for (var p = 0; p < 10; p++) { c.beginPath(); c.ellipse(rand(15, 110), rand(8, 50), rand(4, 10), rand(2, 5), rand(0, 3), 0, 6.283); c.fill(); }
-    c.setTransform(1, 0, 0, 1, 0, 0);
-    // borda com mato (grama e capim nas bordas, como nas fotos)
-    c.save(); poly(c, LOT); c.strokeStyle = 'rgba(110, 140, 60, 0.85)'; c.lineWidth = pm(9); c.stroke(); c.restore();
-    speckle(c, -80, -100, 60, 40, ['#6f8f3f', '#86a24c'], 0, 1, 2, 0.6);
-  } else {
-    rectW(c, -80, -100, 60, 40, '#55585c');
-    lotFrame(c);
-    c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = 0.16;
-    var rows = mode === 'towers' ? [] : (mode === 'mall' ? [33, 45] : [50]);
-    rows.forEach(function (t) { for (var s = 2; s < 124; s += 2.6) { c.beginPath(); c.moveTo(s, t - 5); c.lineTo(s, t); c.stroke(); c.beginPath(); c.moveTo(s, t + 0.6); c.lineTo(s, t + 5.6); c.stroke(); } });
-    if (mode === 'market') { for (var s2 = 2; s2 < 124; s2 += 2.6) { c.beginPath(); c.moveTo(s2, 1); c.lineTo(s2, 5); c.stroke(); } }
-    if (mode === 'towers') {
-      c.fillStyle = '#86b257'; c.fillRect(-10, -10, 150, 90);
-      c.fillStyle = '#d9d2c3'; c.fillRect(0, 50, 124, 8); c.fillRect(58, 0, 7, 58);
-      c.fillStyle = '#35b3e3'; c.fillRect(54, 36, 18, 9);
-      c.fillStyle = '#d9d2c3'; c.fillRect(50, 33, 26, 2);
-    }
+  rectW(c, -80, -100, 60, 40, '#c8673f');
+  speckle(c, -80, -100, 60, 40, ['#b85a35', '#d77a4c', '#e08d5c', '#a9532f', '#c4704a'], 3200, 0.6, 5, 0.55);
+  lotFrame(c); c.strokeStyle = 'rgba(120, 50, 25, 0.35)'; c.lineWidth = 0.35;
+  for (var k = 0; k < 26; k++) { var t0 = rand(5, 55); c.beginPath(); c.moveTo(rand(0, 30), t0); c.bezierCurveTo(rand(30, 60), t0 + rand(-14, 14), rand(60, 90), t0 + rand(-14, 14), rand(90, 124), t0 + rand(-10, 10)); c.stroke(); }
+  c.fillStyle = 'rgba(240, 190, 150, 0.35)';
+  for (var p = 0; p < 10; p++) { c.beginPath(); c.ellipse(rand(15, 110), rand(8, 50), rand(4, 10), rand(2, 5), rand(0, 3), 0, 6.283); c.fill(); }
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  poly(c, LOT); c.strokeStyle = 'rgba(110, 140, 60, 0.85)'; c.lineWidth = pm(9); c.stroke();
+  c.restore();
+  // o quadrado à venda
+  c.save(); poly(c, SQ); c.clip();
+  if (mode !== 'original') {
+    rectW(c, -40, -20, 50, 60, '#55585c');
+    sqFrame(c); c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 0.15;
+    for (var s = 3; s < 28; s += 2.6) { c.beginPath(); c.moveTo(s, 2.5); c.lineTo(s, 7.5); c.stroke(); }
+    c.fillStyle = '#86b257'; c.fillRect(0, 0, 30, 1.6); c.fillRect(0, 0, 1.6, 30);
     c.setTransform(1, 0, 0, 1, 0, 0);
   }
-  if (hl) { c.fillStyle = 'rgba(234, 88, 12, 0.32)'; c.fillRect(0, 0, S, S); }
+  if (hl) { c.fillStyle = 'rgba(249, 115, 22, 0.42)'; c.fillRect(0, 0, S, S); }
   c.restore();
-  poly(c, LOT); c.strokeStyle = hl ? '#f97316' : '#e11d1d'; c.lineWidth = pm(1.1); c.stroke();
+  poly(c, SQ); c.strokeStyle = hl ? '#f97316' : '#e11d1d'; c.lineWidth = pm(1.1); c.stroke();
 }
 function repaint() { var c = worldCanvas.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(base, 0, 0); paintLot(c, state.mode, state.hl); worldTex.needsUpdate = true; }
 
@@ -453,8 +448,8 @@ strip(offsetLine(AVENUE, 9), 0.4, 0.17, curb, { raw: true }); strip(offsetLine(A
   var cv = document.createElement('canvas'); cv.width = 256; cv.height = 128; var c = cv.getContext('2d');
   c.fillStyle = '#16a34a'; c.fillRect(0, 0, 256, 128); c.fillStyle = '#fff'; c.font = '700 44px Sora, sans-serif'; c.textAlign = 'center'; c.fillText('VENDE-SE', 128, 62); c.font = '600 22px Inter, sans-serif'; c.fillText('TERRENO DE ESQUINA', 128, 98);
   var sign = new THREE.MeshLambertMaterial({ map: new THREE.CanvasTexture(cv) });
-  var sp = L(70, 54);
-  var g = new THREE.Group(); g.position.set(sp[0], H(sp[0], sp[1]), sp[1]); g.rotation.y = -TH + Math.PI; scene.add(g);
+  var sp = Q(16, 3);
+  var g = new THREE.Group(); g.position.set(sp[0], H(sp[0], sp[1]), sp[1]); g.rotation.y = Math.atan2(-0.674, 0.739); g.name = 'sign'; scene.add(g);
   box(0.15, 3.2, 0.15, M(0x777777), -1.4, 0, 0, g); box(0.15, 3.2, 0.15, M(0x777777), 1.4, 0, 0, g);
   var pl = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.7, 0.08), [M(0x16a34a), M(0x16a34a), M(0x16a34a), M(0x16a34a), sign, sign]); pl.position.set(0, 3.3, 0); pl.castShadow = true; g.add(pl);
 })();
@@ -589,11 +584,11 @@ var lotShrubs = [];
     var s = rand(0, 1), e = pick([[A, B], [B, C], [C, D], [D, A]]), x0 = e[0][0] + (e[1][0] - e[0][0]) * s, z0 = e[0][1] + (e[1][1] - e[0][1]) * s;
     var cx = (A[0] + B[0] + C[0] + D[0]) / 4, cz = (A[1] + B[1] + C[1] + D[1]) / 4, f = rand(0.01, 0.09);
     var x = x0 + (cx - x0) * f, z = z0 + (cz - z0) * f;
-    if (inLot(x, z)) lotShrubs.push([x, z, rand(0.5, 1.4)]);
+    if (inLot(x, z)) lotShrubs.push([x, z, rand(0.5, 1.4), pip(SQ, x, z)]);
   }
 })();
-var shrubMesh = treeLayer(600, 1);
-(function () { for (var i = 0; i < lotShrubs.length; i++) shrubMesh.add_(lotShrubs[i][0], lotShrubs[i][1], lotShrubs[i][2], pick([0x5d7f2e, 0x6e8f38, 0x7b9a40, 0x4f7027]), 0.55); })();
+var shrubMesh = treeLayer(200, 1), shrubRest = treeLayer(600, 1);
+(function () { for (var i = 0; i < lotShrubs.length; i++) (lotShrubs[i][3] ? shrubMesh : shrubRest).add_(lotShrubs[i][0], lotShrubs[i][1], lotShrubs[i][2], pick([0x5d7f2e, 0x6e8f38, 0x7b9a40, 0x4f7027]), 0.55); })();
 // palmeiras do outro lado da avenida
 (function () {
   var trunk = M(0x8b7355), crown = M(0x3f7d2c, { side: THREE.DoubleSide });
@@ -611,44 +606,38 @@ var shrubMesh = treeLayer(600, 1);
 
 /* ---------- contorno do lote ---------- */
 var outlineMat = new THREE.MeshBasicMaterial({ color: 0xf97316, side: THREE.DoubleSide });
-strip(LOT.concat([A]), 0.9, 0.35, outlineMat);
-LOT.forEach(function (p) { var m = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 4, 8), outlineMat); m.position.set(p[0], H(p[0], p[1]) + 2, p[1]); scene.add(m); });
+strip(SQ.concat([SQ[0]]), 0.9, 0.35, outlineMat);
+SQ.forEach(function (p) { var m = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 4, 8), outlineMat); m.position.set(p[0], H(p[0], p[1]) + 2, p[1]); scene.add(m); });
 
 /* ---------- simulações ---------- */
-var dev = { mall: new THREE.Group(), market: new THREE.Group(), towers: new THREE.Group() };
+var dev = { shop: new THREE.Group(), office: new THREE.Group() };
 Object.keys(dev).forEach(function (k) { dev[k].visible = false; scene.add(dev[k]); });
-function at(s, t) { var p = L(s, t); return p; }
-function lbox(group, s0, s1, t0, t1, h, mats) {
-  var p = at((s0 + s1) / 2, (t0 + t1) / 2), m = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, h, t1 - t0), mats);
-  m.position.set(p[0], H(p[0], p[1]) + h / 2, p[1]); m.rotation.y = -TH; m.castShadow = m.receiveShadow = true; group.add(m); return m;
+function qbox(group, s0, s1, t0, t1, h, mats) {
+  var p = Q((s0 + s1) / 2, (t0 + t1) / 2), m = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, h, t1 - t0), mats);
+  m.position.set(p[0], H(p[0], p[1]) + h / 2, p[1]); m.rotation.y = PHI; m.castShadow = m.receiveShadow = true; group.add(m); return m;
 }
-var parkedDev = {};
 (function () {
-  function storefront(color, n) {
-    var cv = document.createElement('canvas'); cv.width = 1024; cv.height = 128; var c = cv.getContext('2d');
-    c.fillStyle = '#f6f5f2'; c.fillRect(0, 0, 1024, 128); c.fillStyle = color; c.fillRect(0, 34, 1024, 12);
-    c.fillStyle = '#25303c'; for (var i = 0; i < n; i++) c.fillRect(8 + i * (1024 / n), 56, 1024 / n - 14, 72);
+  function storefront(color, n, floors) {
+    var cv = document.createElement('canvas'); cv.width = 512; cv.height = 128 * floors; var c = cv.getContext('2d');
+    c.fillStyle = '#f6f5f2'; c.fillRect(0, 0, 512, cv.height);
+    for (var f = 0; f < floors; f++) {
+      var y = f * 128;
+      if (f === floors - 1) { c.fillStyle = color; c.fillRect(0, y + 22, 512, 14); c.fillStyle = '#25303c'; for (var i = 0; i < n; i++) c.fillRect(8 + i * (512 / n), y + 48, 512 / n - 14, 80); }
+      else { c.fillStyle = '#3b4c5e'; for (var j = 0; j < 8; j++) c.fillRect(10 + j * 63, y + 30, 48, 64); }
+    }
     var t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return new THREE.MeshLambertMaterial({ map: t });
   }
   var plain = M(0xf1f1ef), roof = M(0xdcdddf);
-  // centro comercial em L: lojas ao longo da R. Fúlvio e da lateral NO, estacionamento voltado para a avenida
-  var sf = storefront('#b4532a', 18);
-  lbox(dev.mall, 8, 118, 3, 22, 9, [plain, plain, roof, roof, sf, plain]);
-  lbox(dev.mall, 22, 34, 22, 40, 9, [sf, plain, roof, roof, plain, plain]);
-  var totem = at(108, 54); box(1.2, 9, 3, M(0xb4532a), totem[0], H(totem[0], totem[1]), totem[1], dev.mall, -TH);
-  // supermercado
-  var mk = storefront('#16a34a', 8);
-  lbox(dev.market, 30, 104, 8, 40, 11, [plain, plain, roof, roof, mk, plain]);
-  lbox(dev.market, 58, 76, 40, 44, 4, [M(0x16a34a), M(0x16a34a), M(0x16a34a), M(0x16a34a), M(0x16a34a), M(0x16a34a)]);
-  // torres residenciais
-  var tt = facadeTex('#f4f1ea', '#5f7891', 22, 6, { rail: '#cfc6b6' });
-  [[34, 26], [92, 26]].forEach(function (p) { var w = at(p[0], p[1]); building(22, 66, 20, w[0], w[1], tt, 0xd6d0c4, -TH, dev.towers); });
-  var kiosk = at(62, 24); box(12, 4, 8, M(0xf2ede4), kiosk[0], H(kiosk[0], kiosk[1]), kiosk[1], dev.towers, -TH);
-  // carros estacionados nas simulações
-  ['mall', 'market'].forEach(function (k) {
-    var mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1.5, 4.4), M(0xffffff), 160); mesh.castShadow = true; mesh.count = 160;
-    var n = 0, rows = k === 'mall' ? [30.5, 36, 42.5, 48] : [47.5, 53, 3];
-    rows.forEach(function (t) { for (var s = 3.3; s < 122 && n < 160; s += 2.6) { if (R() < 0.45) continue; var p = at(s, t); if (!inLot(p[0], p[1], 1.5)) continue; _q4.setFromEuler(new THREE.Euler(0, -TH, 0)); _m4.compose(new THREE.Vector3(p[0], 0.85, p[1]), _q4, new THREE.Vector3(1, 1, 1)); mesh.setMatrixAt(n, _m4); mesh.setColorAt(n, _c4.setHex(pick(carColors))); n++; } });
+  // loja de esquina: térreo com estacionamento voltado para a avenida
+  var sf = storefront('#b4532a', 4, 1);
+  qbox(dev.shop, 2, 28, 12, 27, 6, [sf, plain, roof, roof, plain, sf]);
+  var tp = Q(27, 9); box(0.8, 6, 2, M(0xb4532a), tp[0], H(tp[0], tp[1]), tp[1], dev.shop, PHI);
+  // prédio comercial de 4 pavimentos
+  var of = storefront('#1f6f8b', 4, 4);
+  qbox(dev.office, 3, 26, 11, 27, 15, [of, plain, roof, roof, plain, of]);
+  ['shop', 'office'].forEach(function (k) {
+    var mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1.5, 4.4), M(0xffffff), 12); mesh.castShadow = true; var n = 0;
+    for (var s = 4.3; s < 27 && n < 12; s += 2.6) { if (R() < 0.35) continue; var p = Q(s, 5); _q4.setFromEuler(new THREE.Euler(0, PHI, 0)); _m4.compose(new THREE.Vector3(p[0], 0.85, p[1]), _q4, new THREE.Vector3(1, 1, 1)); mesh.setMatrixAt(n, _m4); mesh.setColorAt(n, _c4.setHex(pick(carColors))); n++; }
     mesh.count = n; dev[k].add(mesh);
   });
 })();
@@ -687,8 +676,8 @@ function updateTraffic(dt) {
 /* ---------- rótulos ---------- */
 var labelsEl = document.getElementById('labels'), labels = [];
 function label(html, x, y, z, cls) { var el = document.createElement('div'); el.className = 'lbl ' + (cls || ''); el.innerHTML = html; labelsEl.appendChild(el); var o = { el: el, p: new THREE.Vector3(x, y, z), cls: cls || '' }; labels.push(o); return o; }
-var ctr = L(62, 40);
-var bigLabel = label('≈ 6.300 m²<small>Terreno de esquina à venda</small>', ctr[0], 9, ctr[1], 'big');
+var ctr = Q(15, 15);
+var bigLabel = label('≈ 900 m²<small>Terreno de esquina à venda</small>', ctr[0], 10, ctr[1], 'big');
 label('Av. José Moacir Teberga de Toledo', 22, 2, 108, 'road');
 label('R. Fúlvio Pennachi', 85, 2, -3, 'road');
 label('Smart Fit Parque Mosaico', -92, 13, -66);
@@ -697,10 +686,8 @@ label('Vista das Paineiras', 30, 26, -125);
 label('Vista dos Jacarandás', 100, 30, -60);
 label('USF Walid Abdel Aziz', -38, 10, 80);
 (function () {
-  function mid(a, b, o) { return [(a[0] + b[0]) / 2 + o[0], (a[1] + b[1]) / 2 + o[1]]; }
-  var m1 = mid(D, C, [-1, 1]), m2 = mid(A, B, [1, -1]), m3 = mid(B, C, [1, 1]), m4 = mid(A, D, [-1, 0]);
-  label('≈ 93 m', m1[0], 2.5, m1[1], 'dim'); label('≈ 124 m', m2[0], 2.5, m2[1], 'dim');
-  label('≈ 60 m', m3[0], 2.5, m3[1], 'dim'); label('≈ 62 m', m4[0], 2.5, m4[1], 'dim');
+  var m1 = Q(15, -2.5), m2 = Q(-2.5, 15);
+  label('≈ 30 m', m1[0], 2.5, m1[1], 'dim'); label('≈ 30 m', m2[0], 2.5, m2[1], 'dim');
 })();
 var _pv = new THREE.Vector3();
 function updateLabels() {
@@ -722,7 +709,7 @@ function updateLabels() {
 var state = { mode: 'original', hl: true };
 function setMode(mode) {
   state.mode = mode;
-  shrubMesh.visible = mode === 'original';
+  shrubMesh.visible = mode === 'original'; var sg = scene.getObjectByName('sign'); if (sg) sg.visible = mode === 'original';
   Object.keys(dev).forEach(function (k) { dev[k].visible = k === mode; });
   document.querySelectorAll('[data-mode]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mode === mode ? 'true' : 'false'); });
   repaint();
@@ -730,11 +717,11 @@ function setMode(mode) {
 function setHL(on) { state.hl = on; outlineMat.color.setHex(on ? 0xf97316 : 0xe11d1d); document.getElementById('hl').setAttribute('aria-pressed', on ? 'true' : 'false'); repaint(); }
 
 var VIEWS = {
-  drone: { p: [-175, 125, 150], t: [-8, 0, -25] },
-  top: { p: [-8, 520, -12], t: [-8, 0, -28] },
-  corner: { p: [2.6, 1.7, 41.5], t: [-30, 4, -40] },
-  walk: { p: [-5.5, 1.7, 30.5], t: [-72, 5, -32] },
-  back: { p: [110, 130, -200], t: [-8, 0, -20] }
+  drone: { p: [-105, 70, 120], t: [2, 0, 8] },
+  top: { p: [3, 230, 30], t: [3, 0, 12] },
+  corner: { p: [2.6, 1.7, 41.5], t: [-2, 2, -4] },
+  walk: { p: [-34, 1.7, 4.5], t: [6, 2, 16] },
+  back: { p: [85, 95, -120], t: [3, 0, 10] }
 };
 var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches, tween = null;
 function goView(name, instant) {
