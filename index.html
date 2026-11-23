@@ -1,0 +1,938 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Modelo 3D interativo do terreno comercial de 26.000 m² na Av. Torquato Tapajós, Manaus/AM.">
+<style>[hidden]{display:none!important} body{margin:0;font-size:14px} :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Terreno Torquato Tapajós</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-bleed 3D scene; property card top-left, view + simulation controls floating at the bottom */
+:root {
+  --panel: rgba(250, 252, 248, 0.92);
+  --panel-solid: #fafcf8;
+  --ink: #17231c;
+  --muted: #56655b;
+  --line: rgba(23, 35, 28, 0.12);
+  --accent: #1d7a46;
+  --accent-ink: #ffffff;
+  --lot: #22c55e;
+  --chip: rgba(23, 35, 28, 0.06);
+  --display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bg: #cfe3ef;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --panel: rgba(18, 26, 21, 0.9); --panel-solid: #121a15; --ink: #e9f1ec; --muted: #a2b3a8;
+    --line: rgba(233, 241, 236, 0.14); --accent: #3fb873; --accent-ink: #08140d; --chip: rgba(233, 241, 236, 0.08);
+    --bg: #1b2a33; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --panel: rgba(18, 26, 21, 0.9); --panel-solid: #121a15; --ink: #e9f1ec; --muted: #a2b3a8;
+  --line: rgba(233, 241, 236, 0.14); --accent: #3fb873; --accent-ink: #08140d; --chip: rgba(233, 241, 236, 0.08);
+  --bg: #1b2a33; color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); overflow: hidden; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+.card {
+  position: fixed; z-index: 5;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  left: max(16px, env(safe-area-inset-left, 0px));
+  width: min(330px, calc(100vw - 32px));
+  background: var(--panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(10, 30, 20, 0.18);
+  padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.eyebrow { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.card h1 { margin: 0; font-family: var(--display); font-size: 22px; line-height: 1.15; font-weight: 700; text-wrap: balance; }
+.area { display: flex; align-items: baseline; gap: 8px; }
+.area b { font-family: var(--display); font-size: 34px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.area span { color: var(--muted); font-size: 13px; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 13px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; min-width: 0; }
+.note { font-size: 11.5px; color: var(--muted); line-height: 1.45; margin: 0; border-top: 1px solid var(--line); padding-top: 10px; }
+.toggle-card { display: none; }
+
+.dock {
+  position: fixed; z-index: 5; left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; justify-content: center; pointer-events: none;
+}
+.dock-inner {
+  pointer-events: auto; max-width: 100%;
+  background: var(--panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px rgba(10, 30, 20, 0.18);
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0;
+}
+.row { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.row::-webkit-scrollbar { display: none; }
+.row-label { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; flex: none; width: 74px; }
+.btn {
+  flex: none; font: 500 13px/1 var(--body); color: var(--ink); background: var(--chip);
+  border: 1px solid transparent; border-radius: 999px; padding: 8px 13px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { border-color: var(--line); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.sep { width: 1px; height: 20px; background: var(--line); flex: none; margin: 0 4px; }
+
+.labels { position: fixed; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.lbl {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -100%);
+  font: 600 11.5px/1.2 var(--body); color: #17231c; background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px; border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.lbl::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 1px; height: 5px; background: rgba(255,255,255,0.9); }
+.lbl.big {
+  font: 700 22px/1 var(--display); color: #fff; background: rgba(21, 128, 61, 0.88); padding: 8px 12px; border-radius: 8px;
+}
+.lbl.big small { display: block; font: 600 10.5px/1.3 var(--body); letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.9; margin-top: 3px; }
+.lbl.dim { background: rgba(226, 35, 35, 0.92); color: #fff; font-variant-numeric: tabular-nums; }
+.lbl.dim::after { display: none; }
+.lbl.road { background: rgba(30, 41, 59, 0.85); color: #fff; }
+
+.compass {
+  position: fixed; z-index: 5; top: calc(env(safe-area-inset-top, 0px) + 16px); right: max(16px, env(safe-area-inset-right, 0px));
+  width: 48px; height: 48px; border-radius: 50%; background: var(--panel); border: 1px solid var(--line);
+  box-shadow: 0 6px 18px rgba(10, 30, 20, 0.16); display: grid; place-items: center;
+}
+.compass svg { width: 40px; height: 40px; }
+.compass .n { fill: #dc2626; }
+.compass .s { fill: var(--muted); }
+.compass text { fill: var(--ink); font: 700 9px var(--display); }
+
+.loading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 9; background: var(--bg); color: var(--muted); font: 500 14px var(--body); }
+
+@media (max-width: 640px) {
+  .card { padding: 12px 14px; gap: 6px; width: calc(100vw - 96px); }
+  .card h1 { font-size: 17px; }
+  .area b { font-size: 24px; }
+  .card.collapsed .facts, .card.collapsed .note { display: none; }
+  .toggle-card { display: inline-block; align-self: flex-start; font: 600 12px var(--body); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+  .row-label { width: auto; }
+  .dock-inner { width: 100%; }
+  .lbl { font-size: 10.5px; }
+  .lbl.big { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+</head>
+<body>
+<div id="stage"></div>
+<div class="labels" id="labels"></div>
+<div class="loading" id="loading">Carregando o modelo 3D…</div>
+
+<section class="card collapsed" id="card" aria-label="Dados do terreno">
+  <div class="eyebrow">Terreno comercial · Manaus/AM</div>
+  <h1>Av. Torquato Tapajós</h1>
+  <div class="area"><b>26.000 m²</b><span>área total</span></div>
+  <dl class="facts">
+    <dt>Frente</dt><dd>Av. Torquato Tapajós, ≈ 38 m</dd>
+    <dt>Profundidade</dt><dd>≈ 430 m</dd>
+    <dt>Fundos</dt><dd>≈ 80 m</dd>
+    <dt>Vizinhança</dt><dd>Galpão comercial, condomínio residencial, retorno viário</dd>
+  </dl>
+  <p class="note">Modelo ilustrativo montado a partir do vídeo de drone e de imagens de satélite. As medidas são aproximadas. Confirme na matrícula do imóvel. Arraste para girar e use dois dedos ou a roda do mouse para zoom.</p>
+  <button class="toggle-card" id="toggleCard" type="button" aria-expanded="false">Ver detalhes</button>
+</section>
+
+<div class="compass" title="Norte" aria-hidden="true">
+  <svg viewBox="-20 -20 40 40" id="compassRose">
+    <polygon class="n" points="0,-15 4.5,0 -4.5,0"></polygon>
+    <polygon class="s" points="0,15 4.5,0 -4.5,0"></polygon>
+    <text x="0" y="-16.5" text-anchor="middle" dominant-baseline="auto">N</text>
+  </svg>
+</div>
+
+<nav class="dock" aria-label="Controles do modelo">
+  <div class="dock-inner">
+    <div class="row" role="group" aria-label="Câmera">
+      <span class="row-label">Vista</span>
+      <button class="btn" id="v-drone" data-view="drone" aria-pressed="true" type="button">Drone</button>
+      <button class="btn" id="v-top" data-view="top" aria-pressed="false" type="button">De cima</button>
+      <button class="btn" id="v-street" data-view="street" aria-pressed="false" type="button">Da avenida</button>
+      <button class="btn" id="v-back" data-view="back" aria-pressed="false" type="button">Dos fundos</button>
+      <button class="btn" id="v-tunnel" data-view="tunnel" aria-pressed="false" type="button">Retorno e túnel</button>
+      <span class="sep"></span>
+      <button class="btn" id="spin" aria-pressed="false" type="button">Girar</button>
+      <button class="btn" id="hl" aria-pressed="true" type="button">Destacar área</button>
+    </div>
+    <div class="row" role="group" aria-label="Simulação de uso">
+      <span class="row-label">Simular</span>
+      <button class="btn" id="m-original" data-mode="original" aria-pressed="true" type="button">Terreno atual</button>
+      <button class="btn" id="m-clean" data-mode="clean" aria-pressed="false" type="button">Limpo</button>
+      <button class="btn" id="m-towers" data-mode="towers" aria-pressed="false" type="button">Torres residenciais</button>
+      <button class="btn" id="m-condo" data-mode="condo" aria-pressed="false" type="button">Condomínio</button>
+      <button class="btn" id="m-mall" data-mode="mall" aria-pressed="false" type="button">Centro comercial</button>
+    </div>
+  </div>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ---------- helpers ---------- */
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+var R = rng(20261122);
+function rand(a, b) { return a + (b - a) * R(); }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function smooth(t) { return t * t * (3 - 2 * t); }
+
+/* World: x = leste, z = sul (avenida ao sul, z>0). Metros. */
+var LOT = [[0, 0], [-38, 0], [-54, -152], [-72, -462], [3, -432]];
+function xl(z) { // borda oeste do lote
+  if (z >= -152) return -38 + (-16) * (-z / 152);
+  return -54 + (-18) * ((-z - 152) / 310);
+}
+function xr(z) { return 0 + 3 * (-z / 432); }
+function zTop(x) { return -462 + (x + 72) / 75 * 30; }
+function inLot(x, z, m) { m = m || 0; return z <= -m && x >= xl(z) + m && x <= xr(z) - m && z >= zTop(x) + m; }
+
+function H(x, z) { // relevo: plano na avenida, subindo suavemente para o norte
+  var t = clamp((-z - 110) / 420, 0, 1);
+  var base = 7.5 * smooth(t);
+  var n = (Math.sin(x * 0.021) + Math.cos(z * 0.017 + x * 0.008) + 0.6 * Math.sin((x + z) * 0.045)) * 0.7 * t;
+  var south = z > 60 ? clamp((z - 60) / 200, 0, 1) * 1.5 : 0;
+  return base + n + south;
+}
+
+/* ---------- renderer / scene ---------- */
+var stage = document.getElementById('stage');
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+stage.appendChild(renderer.domElement);
+
+var scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xcfe0ea, 700, 2300);
+
+var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 6000);
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 25;
+controls.maxDistance = 1600;
+controls.autoRotateSpeed = 0.6;
+
+// sky dome
+(function () {
+  var g = new THREE.SphereGeometry(3500, 32, 16);
+  var m = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: new THREE.Color(0x3d86d4) }, bottom: { value: new THREE.Color(0xd7e7ef) } },
+    vertexShader: 'varying float h; void main(){ h = normalize(position).y; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+    fragmentShader: 'uniform vec3 top; uniform vec3 bottom; varying float h; void main(){ float t = pow(clamp(h,0.0,1.0),0.55); gl_FragColor = vec4(mix(bottom, top, t),1.0);}'
+  });
+  scene.add(new THREE.Mesh(g, m));
+})();
+
+scene.add(new THREE.HemisphereLight(0xdfefff, 0x5a6b3c, 0.75));
+var sun = new THREE.DirectionalLight(0xfff4e0, 1.05);
+sun.position.set(260, 520, 180);
+sun.target.position.set(-30, 0, -180);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+var sc = sun.shadow.camera; sc.left = -520; sc.right = 520; sc.top = 520; sc.bottom = -520; sc.near = 50; sc.far = 1400;
+sun.shadow.bias = -0.0006;
+scene.add(sun); scene.add(sun.target);
+
+/* ---------- ground texture (pintado em canvas) ---------- */
+var W = 1500, CX = -30, CZ = -220, S = 2048;
+function px(x) { return (x - (CX - W / 2)) / W * S; }
+function pz(z) { return (z - (CZ - W / 2)) / W * S; }
+function pm(m) { return m / W * S; }
+
+function speckle(ctx, x0, z0, x1, z1, colors, count, rmin, rmax, alpha) {
+  for (var i = 0; i < count; i++) {
+    ctx.globalAlpha = alpha * rand(0.4, 1);
+    ctx.fillStyle = colors[(R() * colors.length) | 0];
+    ctx.beginPath();
+    ctx.arc(px(rand(x0, x1)), pz(rand(z0, z1)), pm(rand(rmin, rmax)), 0, 6.283);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function poly(ctx, pts) { ctx.beginPath(); pts.forEach(function (p, i) { (i ? ctx.lineTo : ctx.moveTo).call(ctx, px(p[0]), pz(p[1])); }); ctx.closePath(); }
+function rect(ctx, x0, z0, x1, z1, c) { ctx.fillStyle = c; ctx.fillRect(px(x0), pz(z0), px(x1) - px(x0), pz(z1) - pz(z0)); }
+
+var base = document.createElement('canvas'); base.width = base.height = S;
+(function paintBase() {
+  var c = base.getContext('2d');
+  c.fillStyle = '#5f7a3a'; c.fillRect(0, 0, S, S);
+  speckle(c, CX - W / 2, CZ - W / 2, CX + W / 2, CZ + W / 2, ['#4f6b2f', '#6d8a42', '#7a8f4a', '#3f5a28'], 9000, 3, 14, 0.5);
+  // campo aberto a leste do lote
+  poly(c, [[64, -20], [270, -20], [300, -430], [64, -440]]); c.fillStyle = '#8fae58'; c.fill();
+  speckle(c, 64, -440, 300, -20, ['#a5bf6a', '#7f9e48', '#b7c27a', '#93a85a'], 2200, 2, 9, 0.55);
+  // área industrial a oeste (terra)
+  rect(c, -330, -40, -150, -330, '#c99a6b');
+  speckle(c, -330, -330, -150, -40, ['#d8ad80', '#b88658', '#c4925f'], 900, 3, 12, 0.5);
+  rect(c, -470, -60, -360, -260, '#b98a5e');
+  // pátio atrás do galpão
+  rect(c, 8, -98, 64, -146, '#b89a78');
+  speckle(c, 8, -146, 64, -98, ['#a68866', '#c9ad8a', '#9a7b5c'], 300, 1, 4, 0.6);
+  // canteiro do retorno (terra e grama seca)
+  var inner = [];
+  for (var a = 0; a <= Math.PI; a += Math.PI / 24) inner.push([-76 + 19 * Math.cos(a), -84 - 19 * Math.sin(a)]);
+  inner.push([-95, 2]); inner.push([-57, 2]);
+  poly(c, [[-57, 2]].concat(inner.slice(0, inner.length - 2)).concat([[-95, 2]]));
+  c.fillStyle = '#a99068'; c.fill();
+  speckle(c, -95, -103, -57, 2, ['#8c8a55', '#b79e74', '#7d8a4a'], 400, 1, 4, 0.6);
+  // calçadas / áreas sul
+  rect(c, CX - W / 2, 58, CX + W / 2, 70, '#b9b4aa');
+  rect(c, CX - W / 2, -6, CX + W / 2, 6, '#b9b4aa');
+  // bairro ao sul e ao norte (cinza urbano)
+  rect(c, CX - W / 2, 70, CX + W / 2, CZ + W / 2, '#a8a49a');
+  speckle(c, CX - W / 2, 70, CX + W / 2, CZ + W / 2, ['#9b968b', '#b5b0a5', '#8f8b82', '#6f8a4a'], 2500, 2, 8, 0.5);
+  rect(c, CX - W / 2, CZ - W / 2, CX + W / 2, -600, '#9d9a8f');
+  speckle(c, CX - W / 2, CZ - W / 2, CX + W / 2, -600, ['#8e8b81', '#aaa69b', '#6a8546'], 2500, 2, 9, 0.5);
+  // igarapé ao norte
+  c.strokeStyle = '#3b5a4a'; c.lineWidth = pm(5); c.beginPath();
+  c.moveTo(px(-500), pz(-520)); c.bezierCurveTo(px(-150), pz(-470), px(80), pz(-560), px(420), pz(-470)); c.stroke();
+  // pátio de estacionamento à frente do galpão
+  rect(c, 6, -2, 66, -24, '#55585c');
+  // área do condomínio vizinho
+  rect(c, -110, -112, -64, -440, '#9fa58f');
+  c.fillStyle = '#3aa6d8'; c.fillRect(px(-96), pz(-130), pm(14), pm(8)); // piscina
+})();
+
+var worldCanvas = document.createElement('canvas'); worldCanvas.width = worldCanvas.height = S;
+var worldTex = new THREE.CanvasTexture(worldCanvas);
+worldTex.encoding = THREE.sRGBEncoding;
+worldTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+function paintLot(c, mode, hl) {
+  c.save();
+  poly(c, LOT); c.clip();
+  var x0 = -75, x1 = 5, z0 = -465, z1 = 2;
+  if (mode === 'original') {
+    rect(c, x0, z0, x1, z1, '#b9a55a');
+    speckle(c, x0, z0, x1, z1, ['#c8b76a', '#a8994f', '#8f8c45', '#d1bf78', '#7c8a42'], 2600, 1.5, 7, 0.6);
+    speckle(c, x0, -230, x1, -80, ['#55702f', '#4a6528'], 300, 3, 8, 0.6); // sombra da mata
+    speckle(c, x0, z0, x1, -260, ['#9db35c', '#8aa34f'], 500, 3, 10, 0.5); // fundos mais verdes
+  } else if (mode === 'clean') {
+    rect(c, x0, z0, x1, z1, '#c47f4c');
+    speckle(c, x0, z0, x1, z1, ['#b36f3e', '#d39261', '#a9673a', '#c98a58'], 2600, 1, 6, 0.55);
+    c.strokeStyle = 'rgba(120,70,40,0.35)'; c.lineWidth = pm(0.6);
+    for (var z = 0; z > -470; z -= 4) { c.beginPath(); c.moveTo(px(x0), pz(z)); c.lineTo(px(x1), pz(z - 3)); c.stroke(); }
+  } else {
+    rect(c, x0, z0, x1, z1, '#7fae4f');
+    speckle(c, x0, z0, x1, z1, ['#8bbd59', '#73a346', '#94c062'], 1800, 1.5, 6, 0.5);
+    if (mode === 'towers') {
+      c.strokeStyle = '#d8d3c6'; c.lineWidth = pm(5);
+      c.beginPath(); c.moveTo(px(-20), pz(2)); c.lineTo(px(-20), pz(-200)); c.stroke();
+      rect(c, -46, -150, -4, -205, '#d9d2c0');
+      c.fillStyle = '#35b3e3'; c.fillRect(px(-38), pz(-168), pm(22), pm(12));
+      rect(c, -45, -215, -4, -260, '#66605a'); // quadra
+    } else if (mode === 'condo') {
+      c.strokeStyle = '#cfcabb'; c.lineWidth = pm(7);
+      c.beginPath(); c.moveTo(px(-19), pz(2)); c.lineTo(px(-24), pz(-150)); c.lineTo(px(-33), pz(-440)); c.stroke();
+      c.fillStyle = '#35b3e3'; c.fillRect(px(-42), pz(-232), pm(18), pm(10));
+      rect(c, -50, -24, 2, 2, '#5b5e62');
+    } else if (mode === 'mall') {
+      rect(c, -60, -2, -24, -300, '#4e5155');
+      c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = pm(0.25);
+      for (var zz = -6; zz > -296; zz -= 2.6) {
+        c.beginPath(); c.moveTo(px(-48), pz(zz)); c.lineTo(px(-41), pz(zz)); c.stroke();
+        c.beginPath(); c.moveTo(px(-35), pz(zz)); c.lineTo(px(-28), pz(zz)); c.stroke();
+      }
+      rect(c, -26, -2, 3, -12, '#4e5155');
+    }
+  }
+  if (hl) { c.fillStyle = 'rgba(34, 197, 94, 0.45)'; c.fillRect(0, 0, S, S); }
+  c.restore();
+  poly(c, LOT); c.strokeStyle = hl ? '#16a34a' : '#e11d1d'; c.lineWidth = pm(1.4); c.stroke();
+}
+function repaint() {
+  var c = worldCanvas.getContext('2d');
+  c.drawImage(base, 0, 0);
+  paintLot(c, state.mode, state.hl);
+  worldTex.needsUpdate = true;
+}
+
+var terrainGeo = new THREE.PlaneGeometry(W, W, 220, 220);
+terrainGeo.rotateX(-Math.PI / 2);
+terrainGeo.translate(CX, 0, CZ);
+(function () { var p = terrainGeo.attributes.position; for (var i = 0; i < p.count; i++) p.setY(i, H(p.getX(i), p.getZ(i))); terrainGeo.computeVertexNormals(); })();
+// recorte no terreno para a trincheira da passagem subterrânea
+var TX = -50, TW = 13.6, TZ0 = -42, TZ1 = 125;
+var holeCanvas = document.createElement('canvas'); holeCanvas.width = holeCanvas.height = S;
+(function () { var c = holeCanvas.getContext('2d'); c.fillStyle = '#fff'; c.fillRect(0, 0, S, S); c.fillStyle = '#000'; c.fillRect(px(TX - TW / 2), pz(TZ0), pm(TW), pz(TZ1) - pz(TZ0)); })();
+var terrain = new THREE.Mesh(terrainGeo, new THREE.MeshLambertMaterial({ map: worldTex, alphaMap: new THREE.CanvasTexture(holeCanvas), alphaTest: 0.5 }));
+terrain.receiveShadow = true;
+scene.add(terrain);
+// anel externo para o horizonte
+var outer = new THREE.Mesh(new THREE.RingGeometry(W * 0.7, 3400, 64, 1), new THREE.MeshLambertMaterial({ color: 0x637a48 }));
+outer.rotation.x = -Math.PI / 2; outer.position.set(CX, -0.5, CZ); scene.add(outer);
+
+/* ---------- materiais ---------- */
+function M(color, extra) { return new THREE.MeshLambertMaterial(Object.assign({ color: color }, extra || {})); }
+var asphalt = M(0x3f4246), concrete = M(0xcfcac0), white = M(0xf2f2ee), yellow = M(0xf2c230);
+
+function box(w, h, d, mat, x, y, z, parent) {
+  var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y + h / 2, z); m.castShadow = true; m.receiveShadow = true;
+  (parent || scene).add(m); return m;
+}
+function flat(w, d, mat, x, y, z, parent) {
+  var m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat);
+  m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.receiveShadow = true; (parent || scene).add(m); return m;
+}
+function strip(pts, width, y, mat, follow) { // faixa ao longo de uma polilinha
+  var pos = [], idx = [];
+  for (var i = 0; i < pts.length; i++) {
+    var a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    var dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz) || 1, nx = -dz / L * width / 2, nz = dx / L * width / 2;
+    var p = pts[i], yy = p.length > 2 ? p[2] + y : (follow ? H(p[0], p[1]) + y : y);
+    pos.push(p[0] + nx, yy, p[1] + nz, p[0] - nx, yy, p[1] - nz);
+    if (i) { var k = i * 2; idx.push(k - 2, k, k - 1, k - 1, k, k + 1); }
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+  var mesh = new THREE.Mesh(g, mat); mesh.receiveShadow = true; scene.add(mesh); return mesh;
+}
+
+function facadeTex(wall, win, floors, cols, opts) {
+  opts = opts || {};
+  var cv = document.createElement('canvas'); cv.width = 256; cv.height = 512;
+  var c = cv.getContext('2d'); c.fillStyle = wall; c.fillRect(0, 0, 256, 512);
+  var fh = 512 / floors, cw = 256 / cols;
+  for (var f = 0; f < floors; f++) for (var k = 0; k < cols; k++) {
+    c.fillStyle = win; c.fillRect(k * cw + cw * 0.18, f * fh + fh * 0.25, cw * 0.64, fh * 0.5);
+    if (opts.balcony) { c.fillStyle = opts.balcony; c.fillRect(k * cw + cw * 0.1, f * fh + fh * 0.78, cw * 0.8, fh * 0.08); }
+  }
+  if (opts.band) { c.fillStyle = opts.band; for (var b = 0; b < floors; b++) c.fillRect(0, b * fh, 256, fh * 0.07); }
+  var t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; return t;
+}
+function building(w, h, d, x, z, wallTex, roofColor, parent, ry) {
+  var y = H(x, z) - 2;
+  var roof = M(roofColor);
+  var side = new THREE.MeshLambertMaterial({ map: wallTex });
+  var m = new THREE.Mesh(new THREE.BoxGeometry(w, h + 2, d), [side, side, roof, roof, side, side]);
+  m.position.set(x, y + (h + 2) / 2, z); if (ry) m.rotation.y = ry;
+  m.castShadow = true; m.receiveShadow = true; (parent || scene).add(m); return m;
+}
+
+/* ---------- avenida Torquato Tapajós ---------- */
+var AV0 = 6, AV1 = 58;
+flat(W + 400, AV1 - AV0, asphalt, CX, 0.06, (AV0 + AV1) / 2);
+box(W + 400, 0.35, 3.2, concrete, CX, 0, 32);  // canteiro central
+box(W + 400, 0.25, 1.2, concrete, CX, 0, 31.2);
+(function lanes() {
+  var dash = new THREE.InstancedMesh(new THREE.PlaneGeometry(4, 0.18), white, 2000), i = 0, mm = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  [10.5, 15, 19.5, 24, 40, 44.5, 49, 53.5].forEach(function (lz, li) {
+    if (li === 3 || li === 4) return;
+    for (var x = CX - W / 2 - 150; x < CX + W / 2 + 150 && i < 2000; x += 12) { mm.compose(new THREE.Vector3(x, 0.08, lz + (li < 4 ? 2.2 : -2.2)), q, new THREE.Vector3(1, 1, 1)); dash.setMatrixAt(i++, mm); }
+  });
+  dash.count = i; scene.add(dash);
+  flat(W + 400, 0.25, yellow, CX, 0.08, 29.6); flat(W + 400, 0.25, yellow, CX, 0.08, 34.4);
+  flat(W + 400, 0.25, white, CX, 0.08, 7.2); flat(W + 400, 0.25, white, CX, 0.08, 56.8);
+})();
+// meio-fio / calçadas
+function sidewalk(z, d, gaps) { // calçada com aberturas para as vias que cruzam
+  var x0 = CX - W / 2 - 200, cuts = gaps.concat([[CX + W / 2 + 200, 0]]);
+  cuts.forEach(function (g) { if (g[0] > x0) box(g[0] - x0, 0.22, d, concrete, (x0 + g[0]) / 2, 0, z); x0 = g[1]; });
+}
+sidewalk(3, 6, [[-128, -95], [TX - TW / 2 - 0.4, TX + TW / 2 + 0.4]]);
+sidewalk(63, 10, [[TX - TW / 2 - 0.4, TX + TW / 2 + 0.4]]);
+// postes de iluminação no canteiro
+(function () {
+  var pole = M(0x9aa0a6);
+  for (var x = -560; x < 500; x += 45) {
+    box(0.4, 12, 0.4, pole, x, 0.3, 32);
+    box(5, 0.3, 0.6, pole, x, 12, 32);
+  }
+})();
+
+/* ---------- retorno (alça em U) a oeste do lote ---------- */
+/* Como no vídeo: quem vem do lado sul entra numa trincheira, passa por baixo da avenida pelo túnel,
+   sobe a rampa ao lado do terreno, contorna o retorno e sai na pista sentido oeste. */
+var TD = -6.5; // profundidade da pista no túnel
+function yRoad(z) {
+  if (z <= TZ0) return 0;
+  if (z < -4) return TD * smooth((z - TZ0) / (-4 - TZ0));
+  if (z <= 66) return TD;
+  if (z < TZ1) return TD + (H(TX, TZ1) - TD) * smooth((z - 66) / (TZ1 - 66));
+  return H(TX, z);
+}
+var southPts = [], trenchPts = [], loopPts = [];
+(function () {
+  for (var z = 430; z > TZ1; z -= 8) southPts.push([TX, z, H(TX, z)]);
+  for (var z1 = TZ1; z1 >= TZ0; z1 -= 3) trenchPts.push([TX, z1, yRoad(z1)]);
+  var cx = -76, cz = -84, r = 24;
+  [[TX, -42], [TX, -50], [-50.5, -60], [-51.3, -72]].forEach(function (p) { loopPts.push([p[0], p[1], 0]); });
+  for (var a = 0; a <= Math.PI + 1e-6; a += Math.PI / 20) loopPts.push([cx + r * Math.cos(a), cz - r * Math.sin(a), 0]);
+  for (var z2 = -78; z2 <= -12; z2 += 6) loopPts.push([-100, z2, 0]);
+  [[-101, -6], [-104, -1], [-109, 3.5], [-116, 7], [-124, 9]].forEach(function (p) { loopPts.push([p[0], p[1], 0]); });
+})();
+strip(southPts, 10, 0.12, asphalt);
+strip(trenchPts, 10, 0.05, asphalt);
+strip(loopPts, 10, 0.1, asphalt);
+// faixa central tracejada (duas faixas por sentido de fluxo)
+(function () {
+  var all = [southPts, trenchPts, loopPts], n = 0, dash = new THREE.InstancedMesh(new THREE.BoxGeometry(3, 0.06, 0.2), white, 400);
+  var mm = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+  all.forEach(function (pts) {
+    var acc = 0;
+    for (var i = 1; i < pts.length; i++) {
+      var a = pts[i - 1], b = pts[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]); acc += L;
+      if (acc < 8 || n >= 400) continue; acc = 0;
+      e.set(0, -Math.atan2(b[1] - a[1], b[0] - a[0]), Math.atan2(b[2] - a[2], L) * 0); q.setFromEuler(e);
+      mm.compose(new THREE.Vector3((a[0] + b[0]) / 2, (a[2] + b[2]) / 2 + 0.15, (a[1] + b[1]) / 2), q, new THREE.Vector3(1, 1, 1));
+      dash.setMatrixAt(n++, mm);
+    }
+  });
+  dash.count = n; scene.add(dash);
+})();
+// meio-fio do canteiro central do retorno
+(function () {
+  var inner = [], cx = -76, cz = -84, r = 18.6;
+  for (var z = 2; z > -84; z -= 6) inner.push([-55.4 - 0.1 * (-z / 84), z, 0]);
+  for (var a = 0; a <= Math.PI + 1e-6; a += Math.PI / 20) inner.push([cx + r * Math.cos(a), cz - r * Math.sin(a), 0]);
+  for (var z2 = -84; z2 <= -14; z2 += 6) inner.push([-94.6, z2, 0]);
+  strip(inner, 0.5, 0.3, concrete);
+})();
+// trincheira: muros de arrimo, túnel sob a avenida e emboques
+(function () {
+  var wall = M(0xb8b3a9), dark = M(0x55575a), portal = M(0xd9d5cc);
+  for (var z = TZ0; z < TZ1; z += 3) {
+    var zm = z + 1.5, floor = yRoad(zm) - 0.5, under = zm > 6 && zm < 58;
+    var top = under ? -1.2 : H(TX, zm) + 1.1;
+    [TX - TW / 2, TX + TW / 2].forEach(function (x) { box(0.6, top - floor, 3.02, wall, x, floor, zm); });
+    if (!under) [TX - TW / 2 - 0.6, TX + TW / 2 + 0.6].forEach(function (x) { box(0.25, 1.1, 3.02, M(0x8c9095), x, H(x, zm) + 0.15, zm); });
+  }
+  box(TW + 1.2, 1.2, 52, dark, TX, -1.2, 32);           // laje do túnel (a avenida passa por cima)
+  box(TW + 2.4, 2.4, 0.9, portal, TX, -1.6, 6.2);        // emboque norte
+  box(TW + 2.4, 2.4, 0.9, portal, TX, -1.6, 57.8);       // emboque sul
+  // luminárias no teto do túnel
+  var lamp = new THREE.MeshBasicMaterial({ color: 0xfff3c4 });
+  for (var lz = 10; lz < 56; lz += 6) { var m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 2), lamp); m.position.set(TX, -1.3, lz); scene.add(m); }
+  var tl = new THREE.PointLight(0xfff0cc, 0.8, 40); tl.position.set(TX, -2.5, 32); scene.add(tl);
+})();
+// via de acesso ao condomínio vizinho
+strip([[-76, -106], [-80, -118], [-116, -132], [-118, -200], [-118, -470]], 7, 0.15, asphalt, true);
+
+// palmeiras no canteiro do retorno
+var palmTrunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.25, 0.38, 1, 6), M(0x8b7355), 80);
+var palmCrown = new THREE.InstancedMesh(new THREE.ConeGeometry(3.4, 1.6, 8, 1, true), M(0x3f7d2c, { side: THREE.DoubleSide }), 80);
+palmTrunk.castShadow = palmCrown.castShadow = true;
+(function () {
+  var mm = new THREE.Matrix4(), q = new THREE.Quaternion(), qc = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0)), i = 0;
+  function palm(x, z, h) {
+    mm.compose(new THREE.Vector3(x, h / 2, z), q, new THREE.Vector3(1, h, 1)); palmTrunk.setMatrixAt(i, mm);
+    mm.compose(new THREE.Vector3(x, h + 0.2, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, R() * 6, 0)), new THREE.Vector3(1, 1, 1)); palmCrown.setMatrixAt(i, mm); i++;
+  }
+  for (var z = -10; z > -84; z -= 7) { palm(-59.5, z, rand(7, 10)); palm(-91.5, z - 3, rand(7, 10)); }
+  for (var a = 0.3; a < Math.PI; a += 0.55) palm(-76 + 14 * Math.cos(a), -84 - 14 * Math.sin(a), rand(7, 10));
+  for (var x = -330; x < 300; x += 22) if (x < -110 || x > 70) palm(x, 32, 9);
+  palmTrunk.count = palmCrown.count = i;
+})();
+scene.add(palmTrunk, palmCrown);
+
+/* ---------- vizinhança ---------- */
+// galpão comercial a leste (com placas solares)
+(function warehouse() {
+  var cv = document.createElement('canvas'); cv.width = 512; cv.height = 512; var c = cv.getContext('2d');
+  c.fillStyle = '#c9ccd0'; c.fillRect(0, 0, 512, 512);
+  c.strokeStyle = 'rgba(0,0,0,0.08)'; for (var i = 0; i < 512; i += 8) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, 512); c.stroke(); }
+  c.fillStyle = '#1e3a5f';
+  for (var r = 0; r < 9; r++) for (var k = 0; k < 7; k++) { c.fillRect(270 + k * 33, 30 + r * 52, 30, 46); }
+  c.strokeStyle = '#7f95ad'; c.lineWidth = 1;
+  for (var r2 = 0; r2 < 9; r2++) for (var k2 = 0; k2 < 7; k2++) { c.strokeRect(270 + k2 * 33, 30 + r2 * 52, 30, 46); }
+  var roofTex = new THREE.CanvasTexture(cv); roofTex.encoding = THREE.sRGBEncoding;
+  var fc = document.createElement('canvas'); fc.width = 512; fc.height = 128; var f = fc.getContext('2d');
+  f.fillStyle = '#eef0f2'; f.fillRect(0, 0, 512, 128);
+  f.fillStyle = '#c62828'; f.fillRect(0, 70, 512, 16);
+  f.fillStyle = '#2b3440'; f.fillRect(20, 88, 472, 40);
+  f.fillStyle = '#ffffff'; for (var g = 30; g < 492; g += 40) f.fillRect(g, 88, 2, 40);
+  var frontTex = new THREE.CanvasTexture(fc); frontTex.encoding = THREE.sRGBEncoding;
+  var side = M(0xe6e8ea), front = new THREE.MeshLambertMaterial({ map: frontTex }), roof = new THREE.MeshLambertMaterial({ map: roofTex });
+  var m = new THREE.Mesh(new THREE.BoxGeometry(56, 13, 72), [side, side, roof, side, front, side]);
+  m.position.set(36, 6.5, -60); m.castShadow = m.receiveShadow = true; scene.add(m);
+  // marquise
+  box(56, 0.6, 5, M(0xc62828), 36, 5, -21.5);
+  // vagas
+  var stripe = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.2, 5), white, 40), mm = new THREE.Matrix4(), q = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+  for (var s = 0; s < 22; s++) { mm.compose(new THREE.Vector3(10 + s * 2.6, 0.12, -6), q, new THREE.Vector3(1, 1, 1)); stripe.setMatrixAt(s, mm); }
+  stripe.count = 22; scene.add(stripe);
+})();
+
+// veículos (estacionados, pátio)
+var carColors = [0xf5f5f5, 0x1f2937, 0x9ca3af, 0xb91c1c, 0x1d4ed8, 0xe5e7eb, 0x374151, 0xd4d4d8, 0x0f766e, 0x78350f];
+var parked = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1.5, 4.4), M(0xffffff), 260);
+parked.castShadow = true;
+(function () {
+  var mm = new THREE.Matrix4(), q = new THREE.Quaternion(), i = 0, col = new THREE.Color();
+  function car(x, z, ry, sx, sz, h) {
+    q.setFromEuler(new THREE.Euler(0, ry, 0));
+    mm.compose(new THREE.Vector3(x, H(x, z) + (h || 1.5) / 2, z), q, new THREE.Vector3(sx || 1, (h || 1.5) / 1.5, sz || 1));
+    parked.setMatrixAt(i, mm); parked.setColorAt(i, col.setHex(carColors[(R() * carColors.length) | 0])); i++;
+  }
+  for (var s = 0; s < 18; s++) if (R() < 0.7) car(11.3 + s * 2.6, -9.5, 0);
+  for (var k = 0; k < 70; k++) car(rand(12, 60), rand(-140, -102), R() < 0.5 ? 0 : Math.PI / 2);
+  for (var b = 0; b < 6; b++) car(rand(15, 55), rand(-138, -110), Math.PI / 2, 1.3, 2.7, 3.2);
+  for (var p = 0; p < 30; p++) car(rand(-104, -84), rand(-140, -420), 0);
+  for (var w = 0; w < 60; w++) car(rand(-320, -160), rand(-60, -320), R() < 0.5 ? 0 : Math.PI / 2);
+  parked.count = i;
+})();
+scene.add(parked);
+
+// condomínio residencial vizinho (oeste)
+(function () {
+  var tex = facadeTex('#efe4d6', '#5d6b78', 6, 8, { balcony: '#c98d7a' });
+  [-150, -205, -262, -322, -385].forEach(function (z, i) {
+    building(20, 18 + (i % 2) * 3, 30, -88, z, tex, 0xb8643e);
+  });
+  box(10, 4, 8, M(0xf3ede4), -80, 0.2, -124);
+})();
+
+// área industrial a oeste (galpões)
+(function () {
+  var roofs = [0xe9eaec, 0xdfe2e5, 0xc9ced3, 0xf1f1f1];
+  var defs = [[-180, -60, 24, 90], [-215, -170, 22, 80], [-250, -280, 30, 90], [-300, -90, 26, 120], [-150, -260, 18, 60], [-420, -140, 40, 110], [-420, -330, 50, 90], [-330, -420, 36, 70], [-520, -60, 60, 50], [-560, -250, 50, 120]];
+  defs.forEach(function (d) {
+    var m = box(d[2], rand(9, 13), d[3], M(roofs[(R() * 4) | 0]), d[0], H(d[0], d[1]) - 1, d[1]);
+  });
+  // galpões na frente, junto à avenida (lado oeste)
+  box(40, 10, 34, M(0xeceeef), -150, 0, -24);
+  box(34, 8, 26, M(0xdadde1), -200, 0, -18);
+  box(26, 7, 22, M(0x5b7fa6), -128, 0, -20);
+})();
+
+// lado sul da avenida
+(function () {
+  var t1 = facadeTex('#f1f1ef', '#3d5a80', 3, 10, { band: '#b91c1c' });
+  building(70, 11, 38, 70, 92, t1, 0xe5e5e5);
+  var t2 = facadeTex('#dfe3e7', '#2f3b48', 2, 12);
+  building(70, 9, 50, -105, 108, t2, 0x6b7f99);
+  // prédio com telhado solar ao lado da saída do túnel
+  var solar = M(0x1e3a5f);
+  building(30, 8, 46, -20, 98, t2, 0x8a96a3);
+  box(26, 0.4, 40, solar, -20, H(-20, 98) + 6.1, 98);
+  for (var i = 0; i < 160; i++) {
+    var x = rand(-650, 600), z = rand(130, 520), w = rand(8, 22), d = rand(8, 20), h = rand(3, 9);
+    if (Math.abs(x - 70) < 50 && z < 130) continue;
+    if (Math.abs(x - TX) < w / 2 + 9) continue;
+    box(w, h, d, M([0xd6d3cd, 0xc9c4bc, 0xb3aea6, 0xe7e3dc, 0xa66a4d][(R() * 5) | 0]), x, H(x, z) - 0.5, z);
+  }
+  for (var j = 0; j < 40; j++) { var xx = rand(-650, 600), zz = rand(75, 125); if (xx > -120 && xx < 120) continue; box(rand(14, 30), rand(5, 12), rand(14, 30), M(0xdcdad4), xx, 0, zz); }
+})();
+
+// bairro ao norte e prédios distantes
+var houses = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), M(0xffffff), 1600);
+houses.castShadow = true; houses.receiveShadow = true;
+(function () {
+  var mm = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color(), i = 0;
+  var pal = [0xe8e2d6, 0xd8cfc1, 0xc4b8a6, 0xb5654a, 0xe9e9e9, 0xa9b7c4, 0xd9a18a];
+  function house(x, z, w, h, d) { mm.compose(new THREE.Vector3(x, H(x, z) + h / 2 - 0.3, z), q, new THREE.Vector3(w, h, d)); houses.setMatrixAt(i, mm); houses.setColorAt(i, col.setHex(pal[(R() * pal.length) | 0])); i++; }
+  for (var n = 0; n < 1100; n++) { var x = rand(-780, 720), z = rand(-980, -610); house(x, z, rand(7, 13), rand(3, 7), rand(7, 13)); }
+  for (var m = 0; m < 160; m++) { var x2 = rand(300, 720), z2 = rand(-600, -60); house(x2, z2, rand(8, 14), rand(3, 8), rand(8, 14)); }
+  for (var t = 0; t < 26; t++) { var x3 = rand(-700, 700), z3 = rand(-1050, -680); house(x3, z3, rand(16, 24), rand(18, 40), rand(16, 24)); }
+  houses.count = i;
+})();
+scene.add(houses);
+
+/* ---------- vegetação ---------- */
+var greens = [0x2f5d24, 0x3b6b2a, 0x467a30, 0x2a5220, 0x557f35, 0x3d6f2c, 0x4f7d2e];
+function treeLayer(max, detail) {
+  var g = new THREE.IcosahedronGeometry(1, detail);
+  var mesh = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }), max);
+  mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(max * 3), 3);
+  mesh.castShadow = true; mesh.receiveShadow = true; mesh.count = 0;
+  var mm = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color();
+  mesh.add_ = function (x, z, r, hex, squash) {
+    if (mesh.count >= max) return;
+    q.setFromEuler(new THREE.Euler(0, R() * 6, 0));
+    mm.compose(new THREE.Vector3(x, H(x, z) + r * (squash || 0.85) * 0.9, z), q, new THREE.Vector3(r, r * (squash || 0.85), r));
+    mesh.setMatrixAt(mesh.count, mm); mesh.setColorAt(mesh.count, col.setHex(hex || greens[(R() * greens.length) | 0]).offsetHSL(0, 0, rand(-0.04, 0.04))); mesh.count++;
+  };
+  scene.add(mesh); return mesh;
+}
+var forest = treeLayer(9000, 0);
+var lotTrees = treeLayer(1400, 1);
+
+function blocked(x, z) {
+  if (z > -6 && z < 70) return true;                                    // avenida
+  if (inLot(x, z, -4)) return true;                                     // lote (vegetação própria)
+  if (x > 4 && x < 68 && z > -148) return true;                         // galpão e pátio
+  if (x > -124 && x < -40 && z > -112) return true;                     // retorno
+  if (x > -122 && x < -64 && z < -112 && z > -440) return true;         // condomínio
+  if (x > -340 && x < -140 && z > -340 && z < -20) return true;         // industrial
+  if (Math.abs(x - TX) < 14 && z > -50 && z < 450) return true;        // túnel e rua sul
+  if (z > 70) return R() > 0.08;                                      // sul: urbano
+  if (z < -610) return R() > 0.12;                                      // bairro norte
+  if (x > 64 && x < 290 && z < -20 && z > -430) return R() > 0.1;      // campo leste
+  return false;
+}
+(function fillForest() {
+  var tries = 0;
+  while (forest.count < 8200 && tries < 60000) {
+    tries++;
+    var x = rand(-780, 720), z = rand(-1000, 600);
+    if (blocked(x, z)) continue;
+    forest.add_(x, z, rand(3.5, 7.5));
+  }
+})();
+
+// vegetação do lote, como no vídeo: faixa de mata no meio, borda oeste arborizada, fundos com capim e touceiras
+(function lotVeg() {
+  function put(x, z, r, hex, sq) { if (inLot(x, z, 1.5)) lotTrees.add_(x, z, r, hex, sq); }
+  for (var n = 0; n < 900; n++) { var z = rand(-215, -85), x = rand(xl(z), xr(z)); put(x, z, rand(3.5, 6.5)); }
+  for (var k = 0; k < 120; k++) { var z1 = rand(-85, -4), x1 = xl(z1) + rand(0, 12); put(x1, z1, rand(3, 5.5)); }
+  for (var c = 0; c < 9; c++) {
+    var cz = rand(-440, -230), cx = rand(xl(cz) + 6, xr(cz) - 6);
+    for (var t = 0; t < 10; t++) put(cx + rand(-9, 9), cz + rand(-9, 9), rand(2.5, 5));
+  }
+  for (var e = 0; e < 60; e++) { var z2 = rand(-450, -10), x2 = xr(z2) - rand(1, 6); put(x2, z2, rand(2.5, 4.5)); }
+  for (var s = 0; s < 260; s++) { var z3 = rand(-455, -5), x3 = rand(xl(z3), xr(z3)); put(x3, z3, rand(1.2, 2.3), [0x6b7a2e, 0x7d8a3a, 0x5c6e2a][(R() * 3) | 0], 0.6); }
+})();
+// pequena construção abandonada perto da frente (visível nas imagens)
+var ruin = new THREE.Group(); scene.add(ruin);
+(function () {
+  var cm = M(0xb9b3a8);
+  box(14, 3, 0.4, cm, -22, 0, -40, ruin); box(14, 3, 0.4, cm, -22, 0, -52, ruin);
+  box(0.4, 3, 12, cm, -29, 0, -46, ruin); box(0.4, 2.2, 12, cm, -15, 0, -46, ruin);
+  flat(14, 12, M(0x9c968b), -22, 0.2, -46, ruin);
+})();
+
+// nuvens
+(function () {
+  var cm = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x9aa7b3, transparent: true, opacity: 0.92, fog: false });
+  var g = new THREE.SphereGeometry(1, 12, 8);
+  for (var i = 0; i < 16; i++) {
+    var cx = rand(-1800, 1700), cz = rand(-2200, -400), cy = rand(380, 600);
+    for (var k = 0; k < 6; k++) { var s = rand(40, 85); var m = new THREE.Mesh(g, cm); m.scale.set(s * 1.6, s * 0.6, s); m.position.set(cx + rand(-110, 110), cy + rand(-15, 15), cz + rand(-60, 60)); scene.add(m); }
+  }
+})();
+
+/* ---------- contorno do lote (fita) ---------- */
+function edgePts(pts, step) {
+  var out = [];
+  for (var i = 0; i < pts.length; i++) {
+    var a = pts[i], b = pts[(i + 1) % pts.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(L / step));
+    for (var k = 0; k < n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]);
+  }
+  out.push(pts[0]); return out;
+}
+var outlineMat = new THREE.MeshBasicMaterial({ color: 0x16a34a, side: THREE.DoubleSide });
+var outline = strip(edgePts(LOT, 4), 1.4, 0.45, outlineMat, true);
+var posts = new THREE.Group(); scene.add(posts);
+LOT.forEach(function (p) {
+  var m = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 6, 8), outlineMat);
+  m.position.set(p[0], H(p[0], p[1]) + 3, p[1]); posts.add(m);
+});
+
+/* ---------- simulações de empreendimento ---------- */
+var dev = { towers: new THREE.Group(), condo: new THREE.Group(), mall: new THREE.Group() };
+Object.keys(dev).forEach(function (k) { dev[k].visible = false; scene.add(dev[k]); });
+(function () {
+  // torres residenciais
+  var tt = facadeTex('#f4f1ea', '#6f8aa3', 24, 6, { balcony: '#d7cfc0' });
+  building(22, 72, 24, -21, -64, tt, 0xd6d0c4, dev.towers);
+  building(22, 64, 24, -24, -118, tt, 0xd6d0c4, dev.towers);
+  box(36, 5, 30, M(0xe9e3d6), -22, 0, -92, dev.towers);
+  box(10, 3.5, 8, M(0xf2ede4), -12, H(-12, -180), -182, dev.towers);
+  for (var i = 0; i < 16; i++) { var z = rand(-440, -270), x = rand(xl(z) + 4, xr(z) - 4); var t = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), M(0x3f7d2c, { flatShading: true })); var r = rand(2.5, 4); t.scale.set(r, r, r); t.position.set(x, H(x, z) + r, z); t.castShadow = true; dev.towers.add(t); }
+  // condomínio de prédios baixos
+  var tc = facadeTex('#f5f0e8', '#5b6f82', 4, 6, { balcony: '#c58a6c' });
+  for (var zc = -40; zc > -430; zc -= 40) {
+    var left = xl(zc - 8), right = xr(zc);
+    var w = right - left;
+    if (w > 44) { building(15, 13, 18, left + 13, zc - 8, tc, 0xb8643e, dev.condo); building(15, 13, 18, right - 11, zc - 8, tc, 0xb8643e, dev.condo); }
+    else building(15, 13, 18, right - 11, zc - 8, tc, 0xb8643e, dev.condo);
+  }
+  box(14, 4, 10, M(0xf4efe6), -36, H(-36, -250), -250, dev.condo);
+  // centro comercial
+  var cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; var c = cv.getContext('2d');
+  c.fillStyle = '#f7f7f5'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#26323e';
+  for (var k = 0; k < 16; k++) c.fillRect(8 + k * 32, 66, 26, 52);
+  c.fillStyle = '#1d7a46'; c.fillRect(0, 50, 512, 10);
+  var tm = new THREE.CanvasTexture(cv); tm.encoding = THREE.sRGBEncoding;
+  var stores = new THREE.MeshLambertMaterial({ map: tm }), plain = M(0xf1f1ef), roofm = M(0xdedfe0);
+  var y0 = 0;
+  var mall = new THREE.Mesh(new THREE.BoxGeometry(24, 10, 250), [plain, stores, roofm, roofm, plain, plain]);
+  mall.position.set(-12, 5, -140); mall.castShadow = mall.receiveShadow = true; dev.mall.add(mall);
+  var anchor = new THREE.Mesh(new THREE.BoxGeometry(46, 12, 70), [plain, stores, roofm, roofm, stores, plain]);
+  var az = -330; anchor.position.set(-28, H(-28, az) + 4, az); anchor.castShadow = anchor.receiveShadow = true; dev.mall.add(anchor);
+  for (var u = 0; u < 10; u++) box(3, 1.6, 3, M(0xb0b4b8), -12 + rand(-7, 7), 10, -30 - u * 22, dev.mall);
+  var mm = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color();
+  var mcars = new THREE.InstancedMesh(new THREE.BoxGeometry(4.4, 1.5, 1.9), M(0xffffff), 120); mcars.castShadow = true;
+  var n = 0;
+  for (var zz = -8; zz > -290 && n < 120; zz -= 2.6) {
+    [-44.5, -31.5].forEach(function (xx) { if (R() < 0.45 && n < 120) { mm.compose(new THREE.Vector3(xx, H(xx, zz) + 0.75, zz), q, new THREE.Vector3(1, 1, 1)); mcars.setMatrixAt(n, mm); mcars.setColorAt(n, col.setHex(carColors[(R() * carColors.length) | 0])); n++; } });
+  }
+  mcars.count = n; dev.mall.add(mcars);
+})();
+
+/* ---------- trânsito ---------- */
+var traffic = [];
+var movers = new THREE.InstancedMesh(new THREE.BoxGeometry(4.4, 1.5, 1.95), M(0xffffff), 150);
+movers.castShadow = true; scene.add(movers);
+(function () {
+  var col = new THREE.Color();
+  var lanesW = [10, 14.5, 19, 23.5, 27], lanesE = [37, 41.5, 46, 50.5, 55];
+  for (var i = 0; i < 136; i++) {
+    var east = i % 2 === 0, lane = (east ? lanesE : lanesW)[(R() * 5) | 0];
+    var bus = R() < 0.08;
+    traffic.push({ x: rand(-760, 700), z: lane, v: rand(11, 18) * (east ? 1 : -1), bus: bus });
+    movers.setColorAt(i, col.setHex(bus ? 0xf1f5f9 : carColors[(R() * carColors.length) | 0]));
+  }
+  // carros no retorno
+  for (var j = 0; j < 14; j++) { traffic.push({ loop: true, s: j / 14 + rand(0, 0.03), v: rand(0.0085, 0.0105), lane: R() < 0.5 ? 2.4 : -2.4 }); movers.setColorAt(136 + j, col.setHex(carColors[(R() * carColors.length) | 0])); }
+  movers.count = traffic.length;
+})();
+// rota completa: rua sul → túnel → rampa → retorno → pista sentido oeste
+var routePts = southPts.concat(trenchPts.slice(1), loopPts.slice(1));
+(function () { for (var x = -132; x > -760; x -= 20) routePts.push([x, 10, 0]); })();
+var loopLen = []; (function () { var L = 0; loopLen.push(0); for (var i = 1; i < routePts.length; i++) { L += Math.hypot(routePts[i][0] - routePts[i - 1][0], routePts[i][1] - routePts[i - 1][1]); loopLen.push(L); } loopLen.total = L; })();
+function loopAt(s) {
+  var d = s * loopLen.total, i = 1; while (i < routePts.length - 1 && loopLen[i] < d) i++;
+  var a = routePts[i - 1], b = routePts[i], t = (d - loopLen[i - 1]) / ((loopLen[i] - loopLen[i - 1]) || 1);
+  return { x: a[0] + (b[0] - a[0]) * t, z: a[1] + (b[1] - a[1]) * t, y: a[2] + (b[2] - a[2]) * t, ang: Math.atan2(b[1] - a[1], b[0] - a[0]), avenue: i > routePts.length - 34 };
+}
+var _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler();
+function updateTraffic(dt) {
+  for (var i = 0; i < traffic.length; i++) {
+    var c = traffic[i];
+    if (c.loop) {
+      c.s = (c.s + c.v * dt) % 1; var p = loopAt(c.s), side = p.avenue ? 0 : c.lane;
+      _e.set(0, -p.ang, 0); _q.setFromEuler(_e);
+      _v.set(p.x - Math.sin(p.ang) * side, p.y + 0.85, p.z + Math.cos(p.ang) * side); _s.set(1, 1, 1);
+    } else {
+      c.x += c.v * dt; if (c.x > 720) c.x = -780; if (c.x < -780) c.x = 720;
+      _e.set(0, c.v > 0 ? 0 : Math.PI, 0); _q.setFromEuler(_e);
+      _v.set(c.x, c.bus ? 1.6 : 0.85, c.z); _s.set(c.bus ? 2.8 : 1, c.bus ? 2.1 : 1, c.bus ? 1.3 : 1);
+    }
+    _m.compose(_v, _q, _s); movers.setMatrixAt(i, _m);
+  }
+  movers.instanceMatrix.needsUpdate = true;
+}
+
+/* ---------- rótulos ---------- */
+var labelsEl = document.getElementById('labels');
+var labels = [];
+function label(html, x, y, z, cls, modes) {
+  var el = document.createElement('div'); el.className = 'lbl ' + (cls || ''); el.innerHTML = html; labelsEl.appendChild(el);
+  var o = { el: el, p: new THREE.Vector3(x, y, z), modes: modes }; labels.push(o); return o;
+}
+var bigLabel = label('26.000 m²<small>Terreno à venda</small>', -28, H(-28, -190) + 16, -190, 'big');
+label('Av. Torquato Tapajós', 140, 2, 32, 'road');
+label('Retorno', -76, 10, -70);
+label('Passagem subterrânea', TX, 3, 66, 'road');
+label('Galpão comercial', 36, 16, -60);
+label('Condomínio residencial', -88, H(-88, -262) + 26, -262);
+label('Área industrial', -230, 18, -180);
+label('Frente ≈ 38 m', -19, 4, 2, 'dim');
+label('≈ 430 m', 10, H(6, -330) + 3, -330, 'dim');
+label('Fundos ≈ 80 m', -34, H(-34, -447) + 4, -447, 'dim');
+
+var _pv = new THREE.Vector3();
+function updateLabels() {
+  var w = window.innerWidth, h = window.innerHeight;
+  for (var i = 0; i < labels.length; i++) {
+    var L = labels[i];
+    if (L === bigLabel && !state.hl) { L.el.hidden = true; continue; }
+    _pv.copy(L.p).project(camera);
+    var vis = _pv.z < 1 && _pv.x > -1.1 && _pv.x < 1.1 && _pv.y > -1.1 && _pv.y < 1.1;
+    var d = camera.position.distanceTo(L.p);
+    if (L.el.classList.contains('dim') && d > 900) vis = false;
+    L.el.hidden = !vis;
+    if (vis) L.el.style.transform = 'translate(' + ((_pv.x + 1) / 2 * w).toFixed(1) + 'px,' + ((1 - _pv.y) / 2 * h).toFixed(1) + 'px) translate(-50%,-100%)';
+  }
+}
+
+/* ---------- estado / modos ---------- */
+var state = { mode: 'original', hl: true, view: 'drone' };
+function setMode(mode) {
+  state.mode = mode;
+  lotTrees.visible = mode === 'original';
+  ruin.visible = mode === 'original';
+  Object.keys(dev).forEach(function (k) { dev[k].visible = k === mode; });
+  document.querySelectorAll('[data-mode]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mode === mode ? 'true' : 'false'); });
+  repaint();
+}
+function setHL(on) {
+  state.hl = on;
+  outlineMat.color.setHex(on ? 0x16a34a : 0xe11d1d);
+  document.getElementById('hl').setAttribute('aria-pressed', on ? 'true' : 'false');
+  repaint();
+}
+
+var VIEWS = {
+  drone: { p: [-95, 150, 175], t: [-25, 0, -150] },
+  top: { p: [-30, 760, -175], t: [-30, 0, -215] },
+  street: { p: [-62, 7, 44], t: [-14, 9, -60] },
+  back: { p: [-150, 170, -700], t: [-25, 0, -170] },
+  tunnel: { p: [28, 40, 140], t: [-52, -4, 22] }
+};
+var tween = null;
+function goView(name, instant) {
+  var v = VIEWS[name]; state.view = name;
+  document.querySelectorAll('[data-view]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.view === name ? 'true' : 'false'); });
+  var p1 = new THREE.Vector3().fromArray(v.p), t1 = new THREE.Vector3().fromArray(v.t);
+  if (window.innerWidth < 640 && name !== 'street') p1.sub(t1).multiplyScalar(1.45).add(t1);
+  if (instant || reduceMotion) { camera.position.copy(p1); controls.target.copy(t1); controls.update(); return; }
+  tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: p1, t1: t1, k: 0 };
+}
+var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+document.querySelectorAll('[data-view]').forEach(function (b) { b.addEventListener('click', function () { goView(b.dataset.view); }); });
+document.querySelectorAll('[data-mode]').forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode); }); });
+document.getElementById('hl').addEventListener('click', function () { setHL(!state.hl); });
+var spinBtn = document.getElementById('spin');
+spinBtn.addEventListener('click', function () { controls.autoRotate = !controls.autoRotate; spinBtn.setAttribute('aria-pressed', controls.autoRotate ? 'true' : 'false'); });
+controls.addEventListener('start', function () { tween = null; });
+var card = document.getElementById('card'), tc = document.getElementById('toggleCard');
+tc.addEventListener('click', function () { var c = card.classList.toggle('collapsed'); tc.textContent = c ? 'Ver detalhes' : 'Ocultar detalhes'; tc.setAttribute('aria-expanded', c ? 'false' : 'true'); });
+if (window.innerWidth >= 640) card.classList.remove('collapsed');
+
+window.addEventListener('resize', function () {
+  camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+var rose = document.getElementById('compassRose');
+setMode('original'); setHL(true); goView('drone', true);
+document.getElementById('loading').hidden = true;
+
+var clock = new THREE.Clock();
+function frame() {
+  var dt = Math.min(clock.getDelta(), 0.05);
+  if (tween) {
+    tween.k = Math.min(1, tween.k + dt / 1.6); var e = smooth(tween.k);
+    camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.t0, tween.t1, e);
+    if (tween.k >= 1) tween = null;
+  }
+  controls.update();
+  if (!reduceMotion) updateTraffic(dt); else if (!frame.once) { updateTraffic(0); frame.once = true; }
+  var az = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z);
+  rose.style.transform = 'rotate(' + (az * 180 / Math.PI).toFixed(1) + 'deg)';
+  renderer.render(scene, camera);
+  updateLabels();
+  requestAnimationFrame(frame);
+}
+frame();
+window.__ready = true;
+})();
+</script>
+</body>
+</html>
